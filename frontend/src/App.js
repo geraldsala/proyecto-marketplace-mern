@@ -1,6 +1,6 @@
-// frontend/src/App.js
 import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+// Remove BrowserRouter as Router from this import
+import { Route, Routes } from 'react-router-dom';
 import { Container } from 'react-bootstrap';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -11,8 +11,6 @@ import AdminPage from './pages/AdminPage';
 import ProductPage from './pages/ProductPage';
 import ProfilePage from './pages/ProfilePage';
 import PurchaseHistoryPage from './pages/PurchaseHistoryPage';
-
-
 
 // Componentes que ya tenías creados
 import ContactMenu from './pages/ContactMenu';
@@ -28,8 +26,9 @@ import DetallesCel from './pages/detallescel';
 import DetalleSmart from './pages/detallesmart';
 
 function App() {
+  // Remove the <Router> component that was wrapping everything
   return (
-    <Router>
+    <>
       <Header />
       <main className='py-3'>
         <Container>
@@ -42,7 +41,6 @@ function App() {
             <Route path='/profile' element={<ProfilePage />} />
             <Route path='/purchase-history' element={<PurchaseHistoryPage />} />
             
-
             {/* Rutas de categorías y otros componentes que ya tenías */}
             <Route path="/soporte" element={<ContactMenu />} />
             <Route path="/laptops" element={<Laptop />} />
@@ -61,7 +59,7 @@ function App() {
       <ContactMenu />
       <ScrollToTopButton />
       <Footer />
-    </Router>
+    </>
   );
 }
 

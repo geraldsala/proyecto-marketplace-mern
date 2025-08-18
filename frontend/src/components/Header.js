@@ -1,10 +1,15 @@
-// frontend/src/components/Header.js
 import React, { useContext } from 'react';
 import { LinkContainer } from 'react-router-bootstrap';
-import { Navbar, Nav, Container, NavDropdown, Form, FormControl, Button } from 'react-bootstrap';
+import { Navbar, Nav, Container, NavDropdown, Form, Button } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMicrochip, faShoppingCart, faUser, faUserCog, faStore, faHistory, faSearch, faLaptop, faHeadphones, faMobileAlt, faHome } from '@fortawesome/free-solid-svg-icons';
+// Importamos solo los iconos que necesitamos
+import { 
+  faMicrochip, faShoppingCart, faUser, faStore, faSearch, 
+  faLaptop, faHeadphones, faMobileAlt, faHome, faSignOutAlt, 
+  faUserCog, faHistory 
+} from '@fortawesome/free-solid-svg-icons';
 import AuthContext from '../context/AuthContext';
+import './Header.css';
 
 const Header = () => {
   const { userInfo, logout } = useContext(AuthContext);
@@ -14,88 +19,63 @@ const Header = () => {
   };
 
   return (
-    <header>
-      <Navbar bg='light' expand='lg' collapseOnSelect className='py-3 header'>
+    <header className="header-container">
+      <Navbar expand="lg" collapseOnSelect className="main-navbar">
         <Container>
-          <LinkContainer to='/'>
-            <Navbar.Brand>
-              <FontAwesomeIcon icon={faMicrochip} className='me-2' />
-              Marketplace Tech
+          <LinkContainer to="/">
+            <Navbar.Brand className="d-flex align-items-center">
+              <FontAwesomeIcon icon={faMicrochip} className="me-2" size="lg" />
+              <span className="brand-text">Marketplace Tech</span>
             </Navbar.Brand>
           </LinkContainer>
-          <Navbar.Toggle aria-controls='basic-navbar-nav' />
-          <Navbar.Collapse id='basic-navbar-nav'>
-            <Nav className='mx-auto'>
-              <NavDropdown title='Categorías' id='categories-dropdown'>
-                <LinkContainer to='/laptops'>
-                  <NavDropdown.Item><FontAwesomeIcon icon={faLaptop} className='me-2' /> Laptops</NavDropdown.Item>
-                </LinkContainer>
-                <LinkContainer to='/audio'>
-                  <NavDropdown.Item><FontAwesomeIcon icon={faHeadphones} className='me-2' /> Audio</NavDropdown.Item>
-                </LinkContainer>
-                <LinkContainer to='/celulares'>
-                  <NavDropdown.Item><FontAwesomeIcon icon={faMobileAlt} className='me-2' /> Celulares</NavDropdown.Item>
-                </LinkContainer>
-                <LinkContainer to='/smarthome'>
-                  <NavDropdown.Item><FontAwesomeIcon icon={faHome} className='me-2' /> Smart Home</NavDropdown.Item>
-                </LinkContainer>
-              </NavDropdown>
+          <Navbar.Toggle aria-controls="basic-navbar-nav" />
+          <Navbar.Collapse id="basic-navbar-nav">
+            <Nav className="mx-auto main-nav-links">
+              <LinkContainer to="/laptops"><Nav.Link><FontAwesomeIcon icon={faLaptop} className="me-1" /> Laptops</Nav.Link></LinkContainer>
+              <LinkContainer to="/audio"><Nav.Link><FontAwesomeIcon icon={faHeadphones} className="me-1" /> Audio</Nav.Link></LinkContainer>
+              <LinkContainer to="/celulares"><Nav.Link><FontAwesomeIcon icon={faMobileAlt} className="me-1" /> Celulares</Nav.Link></LinkContainer>
+              <LinkContainer to="/smarthome"><Nav.Link><FontAwesomeIcon icon={faHome} className="me-1" /> Smart Home</Nav.Link></LinkContainer>
             </Nav>
 
-            <Form className='d-flex mx-auto'>
-              <FormControl
-                type='search'
-                placeholder='Buscar productos...'
-                className='me-2'
-                aria-label='Search'
-              />
-              <Button variant='outline-primary'>
-                <FontAwesomeIcon icon={faSearch} />
-              </Button>
-            </Form>
-            
-            <Nav>
-              <LinkContainer to='/cart'>
-                <Nav.Link className='mx-2 d-flex align-items-center'>
-                  <FontAwesomeIcon icon={faShoppingCart} className='me-1' /> Carrito
+            <Nav className="nav-icons">
+              <LinkContainer to="/cart">
+                <Nav.Link className="position-relative">
+                  <FontAwesomeIcon icon={faShoppingCart} size="lg" />
                 </Nav.Link>
               </LinkContainer>
+
               {userInfo ? (
-                <NavDropdown title={userInfo.nombre} id='username'>
-                  <LinkContainer to='/profile'>
-                    <NavDropdown.Item>
-                      <FontAwesomeIcon icon={faUser} className='me-1' /> Perfil
-                    </NavDropdown.Item>
+                <NavDropdown title={<FontAwesomeIcon icon={faUser} size="lg" />} id="username-dropdown" align="end">
+                  <NavDropdown.Header>Hola, {userInfo.nombre}</NavDropdown.Header>
+                  <LinkContainer to="/profile">
+                    <NavDropdown.Item><FontAwesomeIcon icon={faUser} className='me-2' />Mi Perfil</NavDropdown.Item>
                   </LinkContainer>
+                  
                   {userInfo.tipoUsuario === 'comprador' && (
                     <LinkContainer to='/purchase-history'>
-                      <NavDropdown.Item>
-                        <FontAwesomeIcon icon={faHistory} className='me-1' /> Mis Compras
-                      </NavDropdown.Item>
+                      <NavDropdown.Item><FontAwesomeIcon icon={faHistory} className='me-2' /> Mis Compras</NavDropdown.Item>
                     </LinkContainer>
                   )}
                   {userInfo.tipoUsuario === 'tienda' && (
-                    <LinkContainer to='/store-panel'>
-                      <NavDropdown.Item>
-                        <FontAwesomeIcon icon={faStore} className='me-1' /> Panel Tienda
-                      </NavDropdown.Item>
+                    <LinkContainer to="/store-panel">
+                      <NavDropdown.Item><FontAwesomeIcon icon={faStore} className="me-2" /> Panel de Tienda</NavDropdown.Item>
                     </LinkContainer>
                   )}
                   {userInfo.tipoUsuario === 'admin' && (
-                    <LinkContainer to='/admin'>
-                      <NavDropdown.Item>
-                        <FontAwesomeIcon icon={faUserCog} className='me-1' /> Panel Admin
-                      </NavDropdown.Item>
+                     <LinkContainer to='/admin'>
+                       <NavDropdown.Item><FontAwesomeIcon icon={faUserCog} className='me-2' /> Panel Admin</NavDropdown.Item>
                     </LinkContainer>
                   )}
+                  
+                  <NavDropdown.Divider />
                   <NavDropdown.Item onClick={logoutHandler}>
-                    Cerrar Sesión
+                    <FontAwesomeIcon icon={faSignOutAlt} className="me-2" />Cerrar Sesión
                   </NavDropdown.Item>
                 </NavDropdown>
               ) : (
-                <LinkContainer to='/login'>
-                  <Nav.Link className='mx-2 d-flex align-items-center'>
-                    <FontAwesomeIcon icon={faUser} className='me-1' /> Iniciar Sesión
+                <LinkContainer to="/login">
+                  <Nav.Link>
+                    <FontAwesomeIcon icon={faUser} size="lg" />
                   </Nav.Link>
                 </LinkContainer>
               )}
@@ -103,6 +83,14 @@ const Header = () => {
           </Navbar.Collapse>
         </Container>
       </Navbar>
+      <div className="search-bar-container py-2">
+        <Container>
+            <Form className="d-flex">
+                <Form.Control type="search" placeholder="Buscar productos, marcas y más..." className="me-2 search-input" aria-label="Search" />
+                <Button variant="primary" className="search-button"><FontAwesomeIcon icon={faSearch} /></Button>
+            </Form>
+        </Container>
+      </div>
     </header>
   );
 };

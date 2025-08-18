@@ -1,19 +1,18 @@
-// frontend/src/index.js
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import 'bootstrap/dist/css/bootstrap.min.css'; // Ruta corregida
 import './index.css';
 import App from './App';
-import 'bootstrap/dist/css/bootstrap.min.css';
-import reportWebVitals from './reportWebVitals';
-import { AuthProvider } from './context/AuthContext'; // Importación corregida
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
     <AuthProvider>
-      <App />
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
     </AuthProvider>
   </React.StrictMode>
 );
-
-reportWebVitals();

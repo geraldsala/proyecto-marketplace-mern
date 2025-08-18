@@ -1,0 +1,55 @@
+.profile-page-container {
+  padding-left: 2rem;
+  padding-right: 2rem;
+}
+
+/* Contenedor del menú lateral (sidebar) */
+.profile-sidebar {
+  background-color: var(--bg-secondary);
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px var(--shadow-color);
+  height: 100%;
+}
+
+.sidebar-title {
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Estilo de los enlaces de navegación del perfil */
+.profile-nav-link {
+  color: var(--text-secondary) !important;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.5rem;
+  border-radius: 8px;
+  transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+  display: flex;
+  align-items: center;
+}
+
+/* Efecto al pasar el mouse */
+.profile-nav-link:hover {
+  background-color: rgba(74, 144, 226, 0.1); /* Un fondo sutil con tu color de acento */
+  color: var(--accent-primary) !important;
+}
+
+/* Estilo del enlace activo */
+.profile-nav-link.active {
+  background-color: var(--accent-primary) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 8px rgba(74, 144, 226, 0.2);
+}
+
+/* Contenedor del contenido principal */
+.profile-content {
+  background-color: var(--bg-secondary);
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px var(--shadow-color);
+  min-height: 500px; /* Para asegurar que el contenedor tenga altura */
+}

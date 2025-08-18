@@ -1,75 +1,72 @@
-/* frontend/src/index.css */
+/* Importamos la fuente que ya estabas usando */
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap');
 
+/* --- PALETA DE COLORES PRINCIPAL --- */
+/* Definimos tus colores como variables globales para todo el sitio */
 :root {
-  --primary-color: #4A90E2; /* Azul brillante */
-  --secondary-color: #50E3C2; /* Verde turquesa */
-  --bg-color: #F4F7F9; /* Gris muy claro */
-  --text-color: #333333;
-  --header-bg: #FFFFFF; /* Blanco para el header */
-  --footer-bg: #2C3E50; /* Azul oscuro para el footer */
+  --bg-primary: #F4F7F9;
+  --bg-secondary: #FFFFFF;
+  --text-primary: #333333;
+  --text-secondary: #6c757d;
+  --accent-primary: #4A90E2; /* Tu azul brillante */
+  --accent-secondary: #50E3C2; /* Tu verde turquesa */
+  --footer-bg: #2C3E50;
+  --footer-text: #E0E0E0;
+  --border-color: #E0E0E0;
+  --shadow-color: rgba(0, 0, 0, 0.05);
 }
 
+/* --- ESTILOS GLOBALES --- */
 body {
   font-family: 'Montserrat', sans-serif;
-  background-color: var(--bg-color);
-  color: var(--text-color);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 main {
   min-height: 80vh;
 }
 
-/* Estilos para el Header */
-.header {
-  background-color: var(--header-bg);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  border-bottom: 1px solid #E0E0E0;
+/* --- COMPONENTES --- */
+
+/* Estilo general para las tarjetas */
+.card {
+    background-color: var(--bg-secondary) !important;
+    border-color: var(--border-color) !important;
 }
 
-.navbar-brand {
-  font-weight: 700 !important;
-  color: var(--primary-color) !important;
-  font-size: 1.8rem !important;
-  letter-spacing: -1px;
-}
-
-.navbar-nav .nav-link {
-  color: var(--text-color) !important;
-  font-weight: 600;
-  transition: color 0.3s ease-in-out;
-}
-
-.navbar-nav .nav-link:hover {
-  color: var(--primary-color) !important;
+.card, .card-title, .card-text, .card-body {
+    color: var(--text-primary) !important;
 }
 
 /* Estilos para el Footer */
 .footer {
   background-color: var(--footer-bg);
-  color: #E0E0E0;
+  color: var(--footer-text);
 }
 
-/* Estilos para la página de inicio */
+/* Estilos para la página de inicio (Hero Section) */
 .hero-section {
-  background-color: var(--header-bg);
+  background-color: var(--bg-secondary);
   padding: 80px 0;
   border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 6px var(--shadow-color);
   margin-top: 2rem;
 }
 
 .hero-section h1 {
   font-size: 2.5rem;
-  color: var(--primary-color);
+  color: var(--accent-primary);
 }
 
 .hero-section p {
   font-size: 1.25rem;
   max-width: 600px;
   margin: 0 auto;
+  color: var(--text-secondary);
 }
-/* Estilos del Carrusel para que no corte imágenes */
+
+/* Estilos del Carrusel */
 .home-carousel .carousel-item {
   height: 400px;
 }
@@ -79,15 +76,22 @@ main {
   object-fit: cover;
 }
 
-/* Estilos para el perfil */
+/* Estilos para el perfil y otras listas */
+.list-group-item {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
 .list-group-item.active {
-  background-color: var(--primary-color) !important;
-  border-color: var(--primary-color) !important;
+  background-color: var(--accent-primary) !important;
+  border-color: var(--accent-primary) !important;
   color: white !important;
 }
 
-.list-group-item:hover {
-  background-color: var(--primary-color) !important;
-  border-color: var(--primary-color) !important;
+.list-group-item:hover:not(.active) {
+  background-color: var(--accent-primary) !important;
+  border-color: var(--accent-primary) !important;
   color: white !important;
 }

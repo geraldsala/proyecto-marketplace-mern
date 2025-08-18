@@ -1,12 +1,15 @@
-// frontend/src/context/AuthContext.js
-import React, { createContext, useReducer, useEffect } from 'react';
+import React, { createContext, useReducer, useEffect, useContext } from 'react';
 
 const AuthContext = createContext();
 
+// Leemos la información inicial del localStorage
 const initialState = {
-  userInfo: localStorage.getItem('userInfo') ? JSON.parse(localStorage.getItem('userInfo')) : null,
+  userInfo: localStorage.getItem('userInfo')
+    ? JSON.parse(localStorage.getItem('userInfo'))
+    : null,
 };
 
+// El reducer maneja las acciones de login y logout
 const authReducer = (state, action) => {
   switch (action.type) {
     case 'LOGIN':
@@ -24,9 +27,11 @@ const authReducer = (state, action) => {
   }
 };
 
+// El proveedor que envolverá la aplicación
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
+  // Sincronizamos el estado con localStorage
   useEffect(() => {
     if (state.userInfo) {
       localStorage.setItem('userInfo', JSON.stringify(state.userInfo));
@@ -44,10 +49,15 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ ...state, login, logout }}>
+    <AuthContext.Provider value={{ userInfo: state.userInfo, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
 };
+
+// Hook personalizado para consumir el contexto fácilmente
+export const useAuth = () => {
+    return useContext(AuthContext);
+}
 
 export default AuthContext;

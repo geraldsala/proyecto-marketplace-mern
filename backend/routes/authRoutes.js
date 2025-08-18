@@ -1,51 +1,54 @@
-// backend/routes/authRoutes.js
 const express = require('express');
 const router = express.Router();
+const asyncHandler = require('express-async-handler');
 const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
 
 // @desc    Registrar un nuevo usuario
 // @route   POST /api/auth/register
 // @access  Public
-router.post('/register', async (req, res) => {
-  try {
+router.post(
+  '/register',
+  asyncHandler(async (req, res) => {
     const {
       cedula,
       nombre,
+      nombreUsuario,
       email,
       password,
       tipoUsuario,
       pais,
       direccion,
-      fotoLogo,
       telefono,
-      redesSociales,
       nombreTienda,
-      direccionesEnvio,
-      formasPago,
     } = req.body;
+
+    // --- INICIO DE LA CORRECCIÓN ---
+    // 1. Verificación explícita: Si es una tienda, nos aseguramos de que el nombre de la tienda no esté vacío.
+    if (tipoUsuario === 'tienda' && (!nombreTienda || nombreTienda.trim() === '')) {
+        res.status(400);
+        throw new Error('El nombre de la tienda es obligatorio para este tipo de usuario.');
+    }
+    // --- FIN DE LA CORRECCIÓN ---
 
     const userExists = await User.findOne({ $or: [{ email }, { cedula }] });
 
     if (userExists) {
-      res.status(400).json({ message: 'El usuario con este correo o cédula ya existe' });
-      return;
+      res.status(400);
+      throw new Error('El usuario con este correo o cédula ya existe');
     }
 
     const user = await User.create({
       cedula,
       nombre,
+      nombreUsuario,
       email,
       password,
       tipoUsuario,
       pais,
       direccion,
-      fotoLogo,
       telefono,
-      redesSociales,
       nombreTienda,
-      direccionesEnvio,
-      formasPago,
     });
 
     if (user) {
@@ -57,20 +60,19 @@ router.post('/register', async (req, res) => {
         token: generateToken(user._id),
       });
     } else {
-      res.status(400).json({ message: 'Datos de usuario no válidos' });
+      res.status(400);
+      throw new Error('Datos de usuario no válidos');
     }
-  } catch (error) {
-    res.status(500).json({ message: 'Ocurrió un error en el servidor.' });
-  }
-});
+  })
+);
 
 // @desc    Autenticar un usuario y obtener un token
 // @route   POST /api/auth/login
 // @access  Public
-router.post('/login', async (req, res) => {
-  try {
+router.post(
+  '/login',
+  asyncHandler(async (req, res) => {
     const { email, password } = req.body;
-
     const user = await User.findOne({ email });
 
     if (user && (await user.matchPassword(password))) {
@@ -82,11 +84,10 @@ router.post('/login', async (req, res) => {
         token: generateToken(user._id),
       });
     } else {
-      res.status(401).json({ message: 'Email o contraseña no válidos' });
+      res.status(401);
+      throw new Error('Email o contraseña no válidos');
     }
-  } catch (error) {
-    res.status(500).json({ message: 'Ocurrió un error en el servidor.' });
-  }
-});
+  })
+);
 
 module.exports = router;
