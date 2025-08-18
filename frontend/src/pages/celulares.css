@@ -1,0 +1,124 @@
+.celulares-page {
+  background: #fff;
+  min-height: 100vh;
+}
+
+.breadcrumbs {
+  font-size: 0.9rem;
+  color: #777;
+}
+
+.crumb {
+  cursor: pointer;
+}
+.crumb:hover {
+  text-decoration: underline;
+}
+
+.promo-pill {
+  background-color: #ff5a00;
+  color: white;
+  font-weight: bold;
+  border-radius: 20px;
+  padding: 3px 12px;
+  font-size: 0.8rem;
+}
+
+.filters h6 {
+  font-weight: bold;
+}
+
+.filters input[type="range"] {
+  width: 100%;
+}
+
+.grid-products {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 1.5rem;
+}
+
+.list-products .product-card {
+  display: flex;
+  gap: 1rem;
+}
+
+.product-card {
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.2s ease;
+}
+
+.product-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.thumb {
+  position: relative;
+  background: #f9f9f9;
+  text-align: center;
+}
+
+.thumb img {
+  max-width: 100%;
+  height: auto;
+}
+
+.badge-out {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #007bff;
+  color: white;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 0.7rem;
+  font-weight: bold;
+}
+
+.badge-ship {
+  display: inline-flex;
+  align-items: center;
+  background: #e6f0ff;
+  color: #007bff;
+  font-weight: 500;
+  font-size: 0.75rem;
+  border-radius: 6px;
+  padding: 4px 8px;
+  margin-bottom: 5px;
+}
+
+.p-body {
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 4px 0;
+}
+
+.meta {
+  font-size: 0.8rem;
+  color: #777;
+}
+
+.price {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #007bff;
+  margin: 5px 0;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: auto;
+}

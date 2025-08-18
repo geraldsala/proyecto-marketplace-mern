@@ -1,0 +1,45 @@
+.detallesmart-page .card { border-radius: 14px; }
+
+/* Galería */
+.gallery { padding: 14px; }
+.gallery-main {
+  position: relative;
+  background: #fafbfd;
+  border-radius: 12px;
+  min-height: 320px;
+  display: flex; align-items: center; justify-content: center;
+}
+.gallery-main img { max-width: 100%; max-height: 380px; object-fit: contain; }
+.badge-stock {
+  position: absolute; top: 10px; left: 10px;
+  background: #dc3545; color: #fff; font-weight: 700;
+  border-radius: 10px; padding: 6px 10px; font-size: .8rem;
+}
+
+.thumbs { display: flex; gap: 10px; flex-wrap: wrap; }
+.thumbs .thumb {
+  border: 2px solid transparent; border-radius: 10px; padding: 4px;
+  background: #fff; cursor: pointer;
+}
+.thumbs .thumb.active { border-color: #cfe2ff; }
+.thumbs img { width: 86px; height: 64px; object-fit: contain; }
+
+/* Info */
+.price { font-size: 1.8rem; font-weight: 800; color: #0d6efd; }
+.badge-ship {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #eaf3ff; border: 1px solid #cfe2ff; color: #0d6efd;
+  font-weight: 700; border-radius: 10px; padding: 6px 10px;
+}
+.meta .badge { font-weight: 700; }
+.total { font-size: 1rem; }
+
+/* Estrellas */
+.stars .star-active { color: #f6c10e; }
+.stars .star-muted { color: #cfd4da; }
+
+/* Listas */
+.specs { margin: 0; padding-left: 18px; }
+.specs li { margin-bottom: 6px; }
+.reviews { list-style: none; padding-left: 0; margin: 0; }
+.reviews li { padding: 8px 0; border-bottom: 1px solid #eee; }

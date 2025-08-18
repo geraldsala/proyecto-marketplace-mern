@@ -1,0 +1,93 @@
+/* frontend/src/pages/smart.css */
+.smart-page .breadcrumbs .crumb { color:#9b9b9b; }
+
+.smart-page .filters h6{ font-weight:700; }
+
+.smart-page input[type="range"]{
+  width:100%;
+  accent-color:#2d8cff;
+}
+
+.grid-products{
+  display:grid;
+  grid-template-columns: repeat(4, minmax(0,1fr));
+  gap:22px;
+}
+@media (max-width: 1200px){ .grid-products{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
+@media (max-width: 992px){ .grid-products{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
+@media (max-width: 576px){ .grid-products{ grid-template-columns: 1fr; } }
+
+.list-products .product-card{
+  display:flex;
+  gap:18px;
+  padding:14px;
+  border:1px solid #eee;
+  border-radius:12px;
+  margin-bottom:16px;
+  background:#fff;
+}
+.grid-products .product-card{
+  border:1px solid #eee;
+  border-radius:12px;
+  overflow:hidden;
+  background:#fff;
+  display:flex;
+  flex-direction:column;
+}
+
+.product-card .thumb{
+  position:relative;
+  background:#fafafa;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.grid-products .product-card .thumb{ height:190px; }
+.list-products .product-card .thumb{ width:240px; height:160px; border-radius:10px; overflow:hidden; }
+.product-card .thumb img{ max-width:100%; max-height:100%; object-fit:contain; }
+
+.badge-out{
+  position:absolute;
+  right:10px;
+  top:10px;
+  background:#2d8cff;
+  color:#fff;
+  font-weight:800;
+  font-size:.7rem;
+  padding:10px 10px;
+  border-radius:12px;
+  line-height:1;
+  text-align:center;
+}
+
+.product-card .p-body{ padding:12px 14px; }
+.product-card .badges{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+
+.badge-ship{
+  font-size:.78rem;
+  font-weight:700;
+  border-radius:8px;
+  padding:6px 10px;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  background:#eaf3ff;
+  color:#2d8cff;
+  border:1px solid #c8e0ff;
+}
+
+.product-card .title{
+  font-size:.95rem;
+  font-weight:700;
+  margin:4px 0 6px;
+  min-height:42px;
+}
+.product-card .meta{ color:#8a8a8a; font-size:.85rem; }
+
+.product-card .price{
+  font-size:1.15rem;
+  font-weight:800;
+  color:#2d8cff;
+  margin:8px 0 10px;
+}
+.product-card .actions{ display:flex; gap:8px; }
