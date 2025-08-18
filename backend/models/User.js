@@ -1,4 +1,3 @@
-// backend/models/User.js
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
@@ -11,9 +10,14 @@ const userSchema = mongoose.Schema(
       required: true,
       unique: true,
     },
-    nombre: {
+    nombre: { // Nombre completo de la persona o Razón Social de la tienda
       type: String,
       required: true,
+    },
+    nombreUsuario: { // Alias único para el login
+      type: String,
+      required: true,
+      unique: true,
     },
     email: {
       type: String,
@@ -49,7 +53,7 @@ const userSchema = mongoose.Schema(
       type: [String], // Array de strings para varias redes
     },
     // Campos específicos para tiendas
-    nombreTienda: {
+    nombreTienda: { // Nombre comercial de la tienda
       type: String,
       required: function() {
         return this.tipoUsuario === 'tienda';
