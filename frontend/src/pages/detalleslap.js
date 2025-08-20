@@ -1,6 +1,6 @@
 // frontend/src/pages/detalleslap.js
 import React, { useMemo, useState, useEffect } from 'react';
-import { Container, Row, Col, Button, Form, Badge, Alert, Spinner } from 'react-bootstrap';
+import { Container, Row, Col, Button, Form, Badge, Alert, Spinner, Modal } from 'react-bootstrap';
 import { useParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -10,11 +10,41 @@ import {
   faCartPlus,
   faShieldHalved,
   faCircleCheck,
+  faFlag,
 } from '@fortawesome/free-solid-svg-icons';
 import productService from '../services/productService';
 import './detalleslap.css';
 
-// Estrellas
+/* ----------------- Helpers de reportes (localStorage) ----------------- */
+const REPORTS_KEY = 'reports:v1';
+function getReportsMap() {
+  try { return JSON.parse(localStorage.getItem(REPORTS_KEY) || '{}'); } catch { return {}; }
+}
+function getReportCount(productId) {
+  const map = getReportsMap();
+  return Number(map[productId] || 0);
+}
+function addReport(productId) {
+  const map = getReportsMap();
+  map[productId] = Number(map[productId] || 0) + 1;
+  localStorage.setItem(REPORTS_KEY, JSON.stringify(map));
+  return map[productId];
+}
+function isDisabledByReports(productId) {
+  return getReportCount(productId) >= 10;
+}
+
+/* --------------------- Helpers de wishlist (fallback) ------------------ */
+const WL_KEY = 'wishlist:ids';
+function wlGetSet() {
+  try { return new Set(JSON.parse(localStorage.getItem(WL_KEY) || '[]')); }
+  catch { return new Set(); }
+}
+function wlSave(set) {
+  localStorage.setItem(WL_KEY, JSON.stringify([...set]));
+}
+
+/* --------------------------- Estrellas UI ----------------------------- */
 function Stars({ value = 0, size = '1rem', onRate }) {
   const arr = [1, 2, 3, 4, 5];
   return (
@@ -32,24 +62,21 @@ function Stars({ value = 0, size = '1rem', onRate }) {
   );
 }
 
-// Normaliza el objeto devuelto por la API a lo que la vista espera
+/* -------- Normalización de datos que devuelve la API (defensiva) ------ */
 function normalizeProduct(data) {
   const fallbackImg = 'https://via.placeholder.com/800x500?text=Sin+imagen';
+  const imagenes =
+    Array.isArray(data?.imagenes) && data.imagenes.length
+      ? data.imagenes
+      : data?.img
+      ? [data.img]
+      : [fallbackImg];
 
-  // Imágenes: admite `imagenes` (array) o `img` (string)
-  const imagenes = Array.isArray(data?.imagenes) && data.imagenes.length
-    ? data.imagenes
-    : (data?.img ? [data.img] : [fallbackImg]);
-
-  // Precio y envío (acepta distintos nombres)
   const precio = data?.precio ?? data?.price ?? 0;
   const costoEnvio = data?.costoEnvio ?? data?.shippingCost ?? 0;
   const tiempoEnvio = data?.tiempoEnvio ?? data?.shippingTime ?? '48–72 horas';
+  const tienda = data?.tienda ?? { nombreTienda: data?.storeName || 'La Tienda de Tecnología' };
 
-  // Tienda / vendedor
-  const tienda = data?.tienda ?? { nombreTienda: (data?.storeName || 'La Tienda de Tecnología') };
-
-  // Especificaciones
   const especificacionesTecnicas = {
     modelo: data?.especificacionesTecnicas?.modelo ?? data?.modelo ?? 'N/A',
     compatibilidad: data?.especificacionesTecnicas?.compatibilidad ?? 'Windows',
@@ -57,7 +84,7 @@ function normalizeProduct(data) {
   };
 
   return {
-    id: String(data?.id ?? ''),
+    id: String(data?._id ?? data?.id ?? ''), // admitimos _id o id
     nombre: data?.nombre ?? data?.title ?? 'Producto',
     estado: data?.estado ?? 'Nuevo',
     descripcion: data?.descripcion ?? '',
@@ -87,6 +114,19 @@ export default function DetallesLap() {
   const [coment, setComent] = useState('');  // comentario
   const [reseñasUI, setReseñasUI] = useState([]);
 
+  // Reporte
+  const [showReport, setShowReport] = useState(false);
+  const [reportCat, setReportCat] = useState('');
+  const [reportDetails, setReportDetails] = useState('');
+  const [reportSuccess, setReportSuccess] = useState('');
+  const [reportCount, setReportCount] = useState(0);
+  const [isDisabled, setIsDisabled] = useState(false);
+
+  // Wishlist
+  const [inWishlist, setInWishlist] = useState(false);
+  const [wishMsg, setWishMsg] = useState('');
+  const [wishLoading, setWishLoading] = useState(false);
+
   useEffect(() => {
     const fetchProduct = async () => {
       try {
@@ -98,6 +138,22 @@ export default function DetallesLap() {
         setReseñasUI(normalized.reseñas);
         setSel(0);
         setQty(1);
+
+        const currentCount = getReportCount(normalized.id || id);
+        setReportCount(currentCount);
+        setIsDisabled(isDisabledByReports(normalized.id || id));
+
+        // --- Cargar estado de wishlist ---
+        const pid = normalized.id || id;
+        if (productService.isInWishlist) {
+          // Si el servicio tiene verificación server-side
+          const ok = await productService.isInWishlist(pid);
+          setInWishlist(!!ok);
+        } else {
+          // Fallback localStorage
+          const set = wlGetSet();
+          setInWishlist(set.has(pid));
+        }
       } catch (err) {
         setError('No se pudo encontrar el producto solicitado.');
       } finally {
@@ -109,10 +165,10 @@ export default function DetallesLap() {
 
   const precioTotal = useMemo(() => {
     if (!product) return 0;
-    return (product.precio * qty) + product.costoEnvio;
+    return product.precio * qty + product.costoEnvio;
   }, [qty, product]);
 
-  const disponible = !!product && product.stock > 0;
+  const disponible = !!product && product.stock > 0 && !isDisabled;
 
   const especificacionesLista = useMemo(() => {
     if (!product) return [];
@@ -132,6 +188,73 @@ export default function DetallesLap() {
     setMyRate(0);
   };
 
+  /* ------------------ Envío del reporte (modal) ------------------ */
+  const REPORT_CATEGORIES = [
+    'Información incorrecta',
+    'Producto fraudulento',
+    'Contenido inapropiado',
+    'Precio engañoso',
+    'Problemas de propiedad intelectual',
+    'Otro',
+  ];
+
+  const submitReport = (e) => {
+    e?.preventDefault?.();
+    if (!reportCat) return;
+
+    const productId = product?.id || id;
+    const newCount = addReport(productId);
+    setReportCount(newCount);
+    setReportSuccess('Tu reporte se realizó con éxito. ¡Gracias por ayudarnos a mejorar!');
+    setShowReport(false);
+    setReportCat('');
+    setReportDetails('');
+
+    if (newCount >= 10) {
+      setIsDisabled(true);
+    }
+  };
+
+  /* ------------------------- Wishlist toggle ---------------------- */
+  const toggleWishlist = async () => {
+    if (!product) return;
+    const pid = product.id || id;
+    setWishLoading(true);
+    setWishMsg('');
+
+    try {
+      if (inWishlist) {
+        if (productService.removeFromWishlist) {
+          await productService.removeFromWishlist(pid);
+        } else {
+          const s = wlGetSet();
+          s.delete(pid);
+          wlSave(s);
+        }
+        setInWishlist(false);
+        setWishMsg('Eliminado de tu wishlist.');
+      } else {
+        if (productService.addToWishlist) {
+          await productService.addToWishlist(pid);
+        } else {
+          const s = wlGetSet();
+          s.add(pid);
+          wlSave(s);
+        }
+        setInWishlist(true);
+        setWishMsg('Agregado a tu wishlist.');
+      }
+      // Limpia el mensaje después de un rato
+      setTimeout(() => setWishMsg(''), 1500);
+    } catch (e) {
+      setWishMsg('No se pudo actualizar la wishlist.');
+      setTimeout(() => setWishMsg(''), 2000);
+    } finally {
+      setWishLoading(false);
+    }
+  };
+
+  /* ------------------------ Loading / Error ----------------------- */
   if (loading) {
     return (
       <Container className="text-center py-5">
@@ -153,13 +276,33 @@ export default function DetallesLap() {
 
   return (
     <Container className="detalleslap-page py-4">
+      {isDisabled && (
+        <Alert variant="warning" className="mb-3">
+          Este producto ha sido <strong>inhabilitado</strong> por reportes de la comunidad.
+        </Alert>
+      )}
+      {reportSuccess && (
+        <Alert variant="success" className="mb-3" onClose={() => setReportSuccess('')} dismissible>
+          {reportSuccess}
+        </Alert>
+      )}
+      {wishMsg && (
+        <Alert variant="info" className="mb-3" onClose={() => setWishMsg('')} dismissible>
+          {wishMsg}
+        </Alert>
+      )}
+
       <Row className="gy-4">
         {/* Galería */}
         <Col lg={6}>
           <div className="gallery card border-0 shadow-sm">
             <div className="gallery-main">
               <img src={product.imagenes[sel]} alt={product.nombre} />
-              {!disponible && <span className="badge-stock">SIN STOCK</span>}
+              {!disponible && (
+                <span className={`badge-stock ${isDisabled ? 'badge-disabled' : ''}`}>
+                  {isDisabled ? 'INHABILITADO' : 'SIN STOCK'}
+                </span>
+              )}
             </div>
             <div className="thumbs mt-3">
               {product.imagenes.map((src, i) => (
@@ -180,9 +323,10 @@ export default function DetallesLap() {
           <div className="card border-0 shadow-sm p-3 h-100 d-flex">
             <div className="d-flex align-items-start justify-content-between flex-wrap gap-2">
               <h2 className="m-0">{product.nombre}</h2>
-              <Badge bg="success" pill className="align-self-start">
-                {product.estado}
-              </Badge>
+              <div className="d-flex align-items-center gap-2">
+                <Badge bg="success" pill className="align-self-start">{product.estado}</Badge>
+                {isDisabled && <Badge bg="secondary" pill className="align-self-start">Inhabilitado</Badge>}
+              </div>
             </div>
 
             {/* Vendedor */}
@@ -198,9 +342,7 @@ export default function DetallesLap() {
             </div>
 
             {/* Precio */}
-            <div className="price mt-3">
-              ₡{product.precio.toLocaleString('es-CR')}
-            </div>
+            <div className="price mt-3">₡{product.precio.toLocaleString('es-CR')}</div>
 
             {/* Envío */}
             <div className="shipping mt-2">
@@ -213,9 +355,10 @@ export default function DetallesLap() {
             {/* Estado / ubicación */}
             <div className="meta mt-3">
               <span className={`badge ${disponible ? 'bg-primary' : 'bg-secondary'}`}>
-                {disponible ? `En stock (${product.stock} disponibles)` : 'Sin stock'}
+                {disponible ? `En stock (${product.stock} disponibles)` : isDisabled ? 'Inhabilitado' : 'Sin stock'}
               </span>
               <span className="ms-3 text-muted">Ubicación: {product.ubicacion}</span>
+              <span className="ms-3 text-muted">Reportes: {reportCount}</span>
             </div>
 
             {/* Acciones */}
@@ -242,9 +385,23 @@ export default function DetallesLap() {
                   <FontAwesomeIcon icon={faCartPlus} className="me-2" />
                   Añadir al carrito
                 </Button>
-                <Button variant="outline-secondary">
+
+                <Button
+                  variant={inWishlist ? 'secondary' : 'outline-secondary'}
+                  onClick={toggleWishlist}
+                  disabled={wishLoading || isDisabled}
+                  title={inWishlist ? 'Quitar de wishlist' : 'Agregar a wishlist'}
+                >
                   <FontAwesomeIcon icon={faHeart} className="me-2" />
-                  Wishlist
+                  {inWishlist ? 'En wishlist' : 'Wishlist'}
+                </Button>
+
+                <Button
+                  variant="outline-dark"
+                  onClick={() => setShowReport(true)}
+                >
+                  <FontAwesomeIcon icon={faFlag} className="me-2" />
+                  Reportar
                 </Button>
               </Col>
             </Row>
@@ -303,12 +460,7 @@ export default function DetallesLap() {
               onChange={(e) => setComent(e.target.value)}
             />
             <div className="d-grid mt-2">
-              <Button onClick={() => {
-                if (!myRate || !coment.trim()) return;
-                setReseñasUI(prev => [{ usuario: 'Tú', estrellas: myRate, comentario: coment.trim() }, ...prev]);
-                setComent('');
-                setMyRate(0);
-              }} variant="primary">
+              <Button onClick={agregarReseña} variant="primary">
                 Enviar reseña
               </Button>
             </div>
@@ -326,6 +478,48 @@ export default function DetallesLap() {
           </div>
         </Col>
       </Row>
+
+      {/* ------------------------- Modal Reportar ------------------------- */}
+      <Modal show={showReport} onHide={() => setShowReport(false)} centered>
+        <Form onSubmit={submitReport}>
+          <Modal.Header closeButton>
+            <Modal.Title>Reportar producto</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Form.Group className="mb-3">
+              <Form.Label>Categoría del reporte</Form.Label>
+              <Form.Select
+                value={reportCat}
+                onChange={(e) => setReportCat(e.target.value)}
+                required
+              >
+                <option value="">Selecciona una categoría…</option>
+                {REPORT_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </Form.Select>
+            </Form.Group>
+
+            <Form.Group>
+              <Form.Label>Detalles (opcional)</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={4}
+                placeholder="Describe brevemente lo sucedido…"
+                value={reportDetails}
+                onChange={(e) => setReportDetails(e.target.value)}
+              />
+              <Form.Text className="text-muted">
+                Reportes actuales: {reportCount} / 10 para inhabilitar el producto.
+              </Form.Text>
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowReport(false)}>Cancelar</Button>
+            <Button type="submit" variant="primary">Enviar reporte</Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
     </Container>
   );
 }

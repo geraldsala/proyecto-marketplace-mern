@@ -6,7 +6,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faMicrochip, faShoppingCart, faUser, faStore, faSearch, 
   faLaptop, faHeadphones, faMobileAlt, faHome, faSignOutAlt, 
-  faUserCog, faHistory 
+  faUserCog, faHistory, faHeart   // 👈 agregado faHeart
 } from '@fortawesome/free-solid-svg-icons';
 import AuthContext from '../context/AuthContext';
 import './Header.css';
@@ -38,6 +38,13 @@ const Header = () => {
             </Nav>
 
             <Nav className="nav-icons">
+              {/* 👇 Wishlist antes del carrito */}
+              <LinkContainer to="/wishlist">
+                <Nav.Link className="position-relative">
+                  <FontAwesomeIcon icon={faHeart} size="lg" />
+                </Nav.Link>
+              </LinkContainer>
+
               <LinkContainer to="/cart">
                 <Nav.Link className="position-relative">
                   <FontAwesomeIcon icon={faShoppingCart} size="lg" />

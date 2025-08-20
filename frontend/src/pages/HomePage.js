@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'; 
 import { Container, Row, Col, Alert, Carousel, Button, Card } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -6,9 +6,10 @@ import { faLaptop, faHeadphones, faMobileAlt, faHome } from '@fortawesome/free-s
 import productService from '../services/productService';
 import ProductCard from '../components/ProductCard';
 import ProductCardSkeleton from '../components/ProductCardSkeleton';
+import SubscribeModal from "./SubscribeModal";  // 👈 Se importa el modal
 import './HomePage.css';
 
-// --- 1. Importamos las imágenes locales ---
+// --- Imágenes locales ---
 import laptopImg from '../assets/images/category-laptops.jpg';
 import audioImg from '../assets/images/category-audio.jpg';
 import celularesImg from '../assets/images/category-celulares.jpg';
@@ -18,6 +19,7 @@ const HomePage = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showSubscribe, setShowSubscribe] = useState(false); // Estado del modal
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -33,8 +35,26 @@ const HomePage = () => {
     };
     fetchProducts();
   }, []);
-  
-  // --- 2. Usamos las variables de las imágenes importadas ---
+
+  // 👇 Mostrar modal SOLO si el usuario está logueado y NO está suscrito
+  useEffect(() => {
+    const userInfo = localStorage.getItem("userInfo"); // viene de authService
+    const alreadySubscribed = localStorage.getItem("isSubscribed");
+
+    if (userInfo && !alreadySubscribed) {
+      const timer = setTimeout(() => {
+        setShowSubscribe(true);
+      }, 5000); // ⏳ 5 segundos
+
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  const handleSubscribe = (email) => {
+    localStorage.setItem("isSubscribed", "true"); // Guardar que ya está suscrito
+    setShowSubscribe(false);
+  };
+
   const categories = [
     { name: 'Laptops', icon: faLaptop, link: '/laptops', img: laptopImg },
     { name: 'Audio', icon: faHeadphones, link: '/audio', img: audioImg },
@@ -44,7 +64,7 @@ const HomePage = () => {
 
   return (
     <>
-      {/* HERO SECTION CON CARRUSEL REDISEÑADO */}
+      {/* HERO SECTION */}
       <Container fluid className="hero-container p-0">
         <Carousel fade interval={5000}>
           <Carousel.Item>
@@ -54,7 +74,9 @@ const HomePage = () => {
               alt="Promoción de tecnología"
             />
             <Carousel.Caption className="hero-caption">
-                <Button as={Link} to="/laptops" variant="primary" size="lg" className="hero-button">Explorar Novedades</Button>
+              <Button as={Link} to="/laptops" variant="primary" size="lg" className="hero-button">
+                Explorar Novedades
+              </Button>
             </Carousel.Caption>
           </Carousel.Item>
           <Carousel.Item>
@@ -64,27 +86,31 @@ const HomePage = () => {
               alt="Ofertas en audio"
             />
             <Carousel.Caption className="hero-caption">
-                <Button as={Link} to="/audio" variant="primary" size="lg" className="hero-button">Ver Audio</Button>
+              <Button as={Link} to="/audio" variant="primary" size="lg" className="hero-button">
+                Ver Audio
+              </Button>
             </Carousel.Caption>
           </Carousel.Item>
           <Carousel.Item>
-             <img
+            <img
               className="d-block w-100 carousel-image"
               src="https://compulago.sirv.com/Banners/Banners-Agosto/Banner-Agosto-MSI.jpg"
               alt="Laptops de alto rendimiento"
             />
             <Carousel.Caption className="hero-caption">
-                <Button as={Link} to="/laptops" variant="primary" size="lg" className="hero-button">Ver Laptops</Button>
+              <Button as={Link} to="/laptops" variant="primary" size="lg" className="hero-button">
+                Ver Laptops
+              </Button>
             </Carousel.Caption>
           </Carousel.Item>
         </Carousel>
       </Container>
-      
+
       {/* SECCIÓN DE CATEGORÍAS */}
       <Container className="my-5">
         <div className="section-title-container">
-            <h2 className='section-title'>Explora por Categoría</h2>
-            <p className="section-subtitle">Encuentra exactamente lo que buscas en nuestras secciones especializadas.</p>
+          <h2 className='section-title'>Explora por Categoría</h2>
+          <p className="section-subtitle">Encuentra exactamente lo que buscas en nuestras secciones especializadas.</p>
         </div>
         <Row>
           {categories.map((cat) => (
@@ -109,22 +135,34 @@ const HomePage = () => {
       {/* SECCIÓN DE ÚLTIMOS PRODUCTOS */}
       <Container className="my-5">
         <div className="section-title-container">
-            <h2 className='section-title'>Últimos Productos</h2>
-            <p className="section-subtitle">Descubre las novedades que acaban de llegar a nuestro marketplace.</p>
+          <h2 className='section-title'>Últimos Productos</h2>
+          <p className="section-subtitle">Descubre las novedades que acaban de llegar a nuestro marketplace.</p>
         </div>
         {error && <Alert variant='danger'>{error}</Alert>}
         <Row>
           {loading ? (
             Array.from({ length: 8 }).map((_, index) => (
-              <Col key={index} sm={12} md={6} lg={4} xl={3} className="mb-4"><ProductCardSkeleton /></Col>
+              <Col key={index} sm={12} md={6} lg={4} xl={3} className="mb-4">
+                <ProductCardSkeleton />
+              </Col>
             ))
           ) : (
             products.map((product) => (
-              <Col key={product._id} sm={12} md={6} lg={4} xl={3} className="mb-4"><ProductCard product={product} /></Col>
+              <Col key={product._id} sm={12} md={6} lg={4} xl={3} className="mb-4">
+                <ProductCard product={product} />
+              </Col>
             ))
           )}
         </Row>
       </Container>
+
+      {/* MODAL DE SUSCRIPCIÓN */}
+      {showSubscribe && (
+        <SubscribeModal 
+          onClose={() => setShowSubscribe(false)} 
+          onSubscribe={handleSubscribe} 
+        />
+      )}
     </>
   );
 };

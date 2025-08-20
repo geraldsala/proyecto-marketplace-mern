@@ -1,6 +1,7 @@
 // frontend/src/pages/detallesaudio.js
+// frontend/src/pages/detallesaudio.js
 import React, { useMemo, useState, useEffect } from 'react';
-import { Container, Row, Col, Button, Form, Badge, Alert, Spinner } from 'react-bootstrap';
+import { Container, Row, Col, Button, Form, Badge, Alert, Spinner, Modal } from 'react-bootstrap';
 import { useParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -10,11 +11,35 @@ import {
   faCartPlus,
   faShieldHalved,
   faCircleCheck,
+  faFlag,
 } from '@fortawesome/free-solid-svg-icons';
 import productService from '../services/productService';
 import './detallesaudio.css';
 
-// Estrellas
+/* ----------------- Helpers de reportes (localStorage) ----------------- */
+const REPORTS_KEY = 'reports:v1';
+function getReportsMap() {
+  try {
+    return JSON.parse(localStorage.getItem(REPORTS_KEY) || '{}');
+  } catch {
+    return {};
+  }
+}
+function getReportCount(productId) {
+  const map = getReportsMap();
+  return Number(map[productId] || 0);
+}
+function addReport(productId) {
+  const map = getReportsMap();
+  map[productId] = Number(map[productId] || 0) + 1;
+  localStorage.setItem(REPORTS_KEY, JSON.stringify(map));
+  return map[productId];
+}
+function isDisabledByReports(productId) {
+  return getReportCount(productId) >= 10;
+}
+
+/* --------------------------- Estrellas UI ----------------------------- */
 function Stars({ value = 0, size = '1rem', onRate }) {
   const arr = [1, 2, 3, 4, 5];
   return (
@@ -32,25 +57,21 @@ function Stars({ value = 0, size = '1rem', onRate }) {
   );
 }
 
-// Normaliza/Completa un producto proveniente del backend
+/* -------- Normalización de datos que devuelve la API (defensiva) ------ */
 function normalizeProduct(data) {
-  const fallbackImg =
-    'https://via.placeholder.com/800x500?text=Sin+imagen';
+  const fallbackImg = 'https://via.placeholder.com/800x500?text=Sin+imagen';
+  const imagenes =
+    Array.isArray(data?.imagenes) && data.imagenes.length
+      ? data.imagenes
+      : data?.img
+      ? [data.img]
+      : [fallbackImg];
 
-  // Arreglo de imágenes: admite `imagenes` (array), o `img` (string)
-  const imagenes = Array.isArray(data?.imagenes) && data.imagenes.length
-    ? data.imagenes
-    : (data?.img ? [data.img] : [fallbackImg]);
-
-  // Precio y envío (admite distintos nombres de campo)
   const precio = data?.precio ?? data?.price ?? 0;
   const costoEnvio = data?.costoEnvio ?? data?.shippingCost ?? 0;
   const tiempoEnvio = data?.tiempoEnvio ?? data?.shippingTime ?? '24–48 horas';
+  const tienda = data?.tienda ?? { nombreTienda: data?.storeName || 'Marketplace Tech' };
 
-  // Tienda
-  const tienda = data?.tienda ?? { nombreTienda: (data?.storeName || 'Marketplace Tech') };
-
-  // Especificaciones
   const especificacionesTecnicas = {
     modelo: data?.especificacionesTecnicas?.modelo ?? data?.modelo ?? 'N/A',
     compatibilidad: data?.especificacionesTecnicas?.compatibilidad ?? 'Bluetooth',
@@ -58,7 +79,7 @@ function normalizeProduct(data) {
   };
 
   return {
-    id: String(data?.id ?? ''),
+    id: String(data?._id ?? data?.id ?? ''), // admite _id o id
     nombre: data?.nombre ?? data?.title ?? 'Producto',
     estado: data?.estado ?? 'Nuevo',
     descripcion: data?.descripcion ?? '',
@@ -86,7 +107,15 @@ export default function DetallesAudio() {
   const [qty, setQty] = useState(1);     // cantidad
   const [myRate, setMyRate] = useState(0);
   const [coment, setComent] = useState('');
-  const [reseñasUI, setReseñasUI] = useState([]); // reseñas locales
+  const [reseñasUI, setReseñasUI] = useState([]);
+
+  // Reporte (idéntico a detalleslap)
+  const [showReport, setShowReport] = useState(false);
+  const [reportCat, setReportCat] = useState('');
+  const [reportDetails, setReportDetails] = useState('');
+  const [reportSuccess, setReportSuccess] = useState('');
+  const [reportCount, setReportCount] = useState(0);
+  const [isDisabled, setIsDisabled] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -99,6 +128,10 @@ export default function DetallesAudio() {
         setReseñasUI(normalized.reseñas);
         setSel(0);
         setQty(1);
+
+        const currentCount = getReportCount(normalized.id || id);
+        setReportCount(currentCount);
+        setIsDisabled(isDisabledByReports(normalized.id || id));
       } catch (err) {
         setError('No se pudo encontrar el producto solicitado.');
       } finally {
@@ -113,7 +146,7 @@ export default function DetallesAudio() {
     return (product.precio * qty) + product.costoEnvio;
   }, [qty, product]);
 
-  const disponible = !!product && product.stock > 0;
+  const disponible = !!product && product.stock > 0 && !isDisabled;
 
   const especificacionesLista = useMemo(() => {
     if (!product) return [];
@@ -131,6 +164,33 @@ export default function DetallesAudio() {
     setReseñasUI(prev => [{ usuario: 'Tú', estrellas: myRate, comentario: coment.trim() }, ...prev]);
     setComent('');
     setMyRate(0);
+  };
+
+  /* ------------------ Envío del reporte (modal) ------------------ */
+  const REPORT_CATEGORIES = [
+    'Información incorrecta',
+    'Producto fraudulento',
+    'Contenido inapropiado',
+    'Precio engañoso',
+    'Problemas de propiedad intelectual',
+    'Otro',
+  ];
+
+  const submitReport = (e) => {
+    e?.preventDefault?.();
+    if (!reportCat) return;
+
+    const productId = product?.id || id;
+    const newCount = addReport(productId);
+    setReportCount(newCount);
+    setReportSuccess('Tu reporte se realizó con éxito. ¡Gracias por ayudarnos a mejorar!');
+    setShowReport(false);
+    setReportCat('');
+    setReportDetails('');
+
+    if (newCount >= 10) {
+      setIsDisabled(true);
+    }
   };
 
   if (loading) {
@@ -154,13 +214,28 @@ export default function DetallesAudio() {
 
   return (
     <Container className="detallesaudio-page py-4">
+      {isDisabled && (
+        <Alert variant="warning" className="mb-3">
+          Este producto ha sido <strong>inhabilitado</strong> por reportes de la comunidad.
+        </Alert>
+      )}
+      {reportSuccess && (
+        <Alert variant="success" className="mb-3" onClose={() => setReportSuccess('')} dismissible>
+          {reportSuccess}
+        </Alert>
+      )}
+
       <Row className="gy-4">
         {/* Galería */}
         <Col lg={6}>
           <div className="gallery card border-0 shadow-sm">
             <div className="gallery-main">
               <img src={product.imagenes[sel]} alt={product.nombre} />
-              {!disponible && <span className="badge-stock">SIN STOCK</span>}
+              {!disponible && (
+                <span className={`badge-stock ${isDisabled ? 'badge-disabled' : ''}`}>
+                  {isDisabled ? 'INHABILITADO' : 'SIN STOCK'}
+                </span>
+              )}
             </div>
             <div className="thumbs mt-3">
               {product.imagenes.map((src, i) => (
@@ -181,9 +256,10 @@ export default function DetallesAudio() {
           <div className="card border-0 shadow-sm p-3 h-100 d-flex">
             <div className="d-flex align-items-start justify-content-between flex-wrap gap-2">
               <h2 className="m-0">{product.nombre}</h2>
-              <Badge bg="success" pill className="align-self-start">
-                {product.estado}
-              </Badge>
+              <div className="d-flex align-items-center gap-2">
+                <Badge bg="success" pill className="align-self-start">{product.estado}</Badge>
+                {isDisabled && <Badge bg="secondary" pill className="align-self-start">Inhabilitado</Badge>}
+              </div>
             </div>
 
             {/* Vendedor */}
@@ -214,12 +290,13 @@ export default function DetallesAudio() {
             {/* Estado / ubicación */}
             <div className="meta mt-3">
               <span className={`badge ${disponible ? 'bg-primary' : 'bg-secondary'}`}>
-                {disponible ? `En stock (${product.stock} disponibles)` : 'Sin stock'}
+                {disponible ? `En stock (${product.stock} disponibles)` : isDisabled ? 'Inhabilitado' : 'Sin stock'}
               </span>
               <span className="ms-3 text-muted">Ubicación: {product.ubicacion}</span>
+              <span className="ms-3 text-muted">Reportes: {reportCount}</span>
             </div>
 
-            {/* Acciones */}
+            {/* Acciones (botón Reportar idéntico al de detalleslap) */}
             <Row className="g-2 mt-3 align-items-end">
               <Col xs="6" sm="4">
                 <Form.Group>
@@ -245,9 +322,16 @@ export default function DetallesAudio() {
                   <FontAwesomeIcon icon={faCartPlus} className="me-2" />
                   Añadir al carrito
                 </Button>
-                <Button variant="outline-secondary">
+                <Button variant="outline-secondary" disabled={isDisabled}>
                   <FontAwesomeIcon icon={faHeart} className="me-2" />
                   Wishlist
+                </Button>
+                <Button
+                  variant="outline-dark"
+                  onClick={() => setShowReport(true)}
+                >
+                  <FontAwesomeIcon icon={faFlag} className="me-2" />
+                  Reportar
                 </Button>
               </Col>
             </Row>
@@ -322,6 +406,48 @@ export default function DetallesAudio() {
           </div>
         </Col>
       </Row>
+
+      {/* ------------------------- Modal Reportar ------------------------- */}
+      <Modal show={showReport} onHide={() => setShowReport(false)} centered>
+        <Form onSubmit={submitReport}>
+          <Modal.Header closeButton>
+            <Modal.Title>Reportar producto</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Form.Group className="mb-3">
+              <Form.Label>Categoría del reporte</Form.Label>
+              <Form.Select
+                value={reportCat}
+                onChange={(e) => setReportCat(e.target.value)}
+                required
+              >
+                <option value="">Selecciona una categoría…</option>
+                {REPORT_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </Form.Select>
+            </Form.Group>
+
+            <Form.Group>
+              <Form.Label>Detalles (opcional)</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={4}
+                placeholder="Describe brevemente lo sucedido…"
+                value={reportDetails}
+                onChange={(e) => setReportDetails(e.target.value)}
+              />
+              <Form.Text className="text-muted">
+                Reportes actuales: {reportCount} / 10 para inhabilitar el producto.
+              </Form.Text>
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowReport(false)}>Cancelar</Button>
+            <Button type="submit" variant="primary">Enviar reporte</Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
     </Container>
   );
 }

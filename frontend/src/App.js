@@ -11,7 +11,7 @@ import AdminPage from './pages/AdminPage';
 import ProductPage from './pages/ProductPage';
 import ProfilePage from './pages/ProfilePage';
 import PurchaseHistoryPage from './pages/PurchaseHistoryPage';
-
+import Wishlist from './pages/wishlist';
 // Componentes que ya tenías creados
 import ContactMenu from './pages/ContactMenu';
 import Laptop from './pages/laptop';
@@ -40,6 +40,7 @@ function App() {
             <Route path='/product/:id' element={<ProductPage />} />
             <Route path='/profile' element={<ProfilePage />} />
             <Route path='/purchase-history' element={<PurchaseHistoryPage />} />
+             <Route path="/wishlist" element={<Wishlist />} />
             
             {/* Rutas de categorías y otros componentes que ya tenías */}
             <Route path="/soporte" element={<ContactMenu />} />
