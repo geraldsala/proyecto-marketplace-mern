@@ -12,7 +12,7 @@ import ProductPage from './pages/ProductPage';
 import ProfilePage from './pages/ProfilePage';
 import PurchaseHistoryPage from './pages/PurchaseHistoryPage';
 import Wishlist from './pages/wishlist';
-// Componentes que ya tenías creados
+
 import ContactMenu from './pages/ContactMenu';
 import Laptop from './pages/laptop';
 import Audio from './pages/audio';
@@ -24,6 +24,7 @@ import DetallesLap from './pages/detalleslap';
 import DetallesAudio from './pages/detallesaudio';
 import DetallesCel from './pages/detallescel'; 
 import DetalleSmart from './pages/detallesmart';
+import ProductEditPage from './pages/ProductEditPage';
 
 function App() {
   // Remove the <Router> component that was wrapping everything
@@ -53,6 +54,7 @@ function App() {
             <Route path="/producto/audio/:id" element={<DetallesAudio />} />
             <Route path="/producto/celular/:id" element={<DetallesCel />} />
             <Route path="/producto/smart/:id" element={<DetalleSmart />} />
+            <Route path="/tienda/producto/:id/edit" element={<ProductEditPage />} /> 
           </Routes>
         </Container>
       </main>

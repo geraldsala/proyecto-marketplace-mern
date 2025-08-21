@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Container, Row, Col, Nav, Form, Button, Alert, Card } from 'react-bootstrap';
+import { Container, Row, Col, Nav, Form, Button, Alert, Card, Table, Spinner } from 'react-bootstrap';
+import { useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUser, faBoxOpen, faCreditCard, faMapMarkerAlt, faHistory } from '@fortawesome/free-solid-svg-icons';
+import { faUser, faBoxOpen, faCreditCard, faMapMarkerAlt, faHistory, faEdit, faTrash, faPlus } from '@fortawesome/free-solid-svg-icons';
 import axios from 'axios';
 import AuthContext from '../context/AuthContext';
+import productService from '../services/productService';
 import './ProfilePage.css';
 
-// Componente para el panel de Información Personal
+// --- PANELES DE CONTENIDO ---
+
+// Panel de Información Personal (sin cambios)
 const PersonalInfoPanel = () => {
   const { userInfo, login } = useContext(AuthContext);
   const [nombre, setNombre] = useState('');
@@ -16,40 +20,19 @@ const PersonalInfoPanel = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  useEffect(() => {
-    if (userInfo) {
-      setNombre(userInfo.nombre);
-      setEmail(userInfo.email);
-    }
-  }, [userInfo]);
+  useEffect(() => { if (userInfo) { setNombre(userInfo.nombre); setEmail(userInfo.email); } }, [userInfo]);
 
   const submitHandler = async (e) => {
     e.preventDefault();
-    if (password && password !== confirmPassword) {
-      setError('Las contraseñas no coinciden');
-      return;
-    }
-    setError('');
-    setSuccess('');
+    if (password && password !== confirmPassword) { setError('Las contraseñas no coinciden'); return; }
+    setError(''); setSuccess('');
     try {
-      const config = {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${userInfo.token}`,
-        },
-      };
-      const { data } = await axios.put(
-        'http://localhost:5000/api/users/profile',
-        { nombre, email, password },
-        config
-      );
-      login(data); // Actualiza el contexto y localStorage
+      const config = { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userInfo.token}` } };
+      const { data } = await axios.put('http://localhost:5000/api/users/profile', { nombre, email, password }, config);
+      login(data);
       setSuccess('Perfil actualizado correctamente');
-      setPassword('');
-      setConfirmPassword('');
-    } catch (err) {
-      setError(err.response?.data?.message || 'Ocurrió un error inesperado');
-    }
+      setPassword(''); setConfirmPassword('');
+    } catch (err) { setError(err.response?.data?.message || 'Ocurrió un error inesperado'); }
   };
 
   return (
@@ -58,145 +41,147 @@ const PersonalInfoPanel = () => {
       {error && <Alert variant='danger'>{error}</Alert>}
       {success && <Alert variant='success'>{success}</Alert>}
       <Form onSubmit={submitHandler}>
-        <Form.Group controlId='nombre' className='mb-3'>
-          <Form.Label>Nombre</Form.Label>
-          <Form.Control
-            type='text'
-            placeholder='Ingresa tu nombre'
-            value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
-          />
-        </Form.Group>
-        <Form.Group controlId='email' className='mb-3'>
-          <Form.Label>Email</Form.Label>
-          <Form.Control
-            type='email'
-            placeholder='Ingresa tu email'
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </Form.Group>
-        <Form.Group controlId='password' className='mb-3'>
-          <Form.Label>Nueva Contraseña (opcional)</Form.Label>
-          <Form.Control
-            type='password'
-            placeholder='Ingresa tu nueva contraseña'
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </Form.Group>
-        <Form.Group controlId='confirmPassword' className='mb-3'>
-          <Form.Label>Confirmar Nueva Contraseña</Form.Label>
-          <Form.Control
-            type='password'
-            placeholder='Confirma la nueva contraseña'
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-          />
-        </Form.Group>
-        <Button type='submit' variant='primary' className='w-100'>
-          Actualizar
-        </Button>
+        <Form.Group controlId='nombre' className='mb-3'><Form.Label>Nombre</Form.Label><Form.Control type='text' placeholder='Ingresa tu nombre' value={nombre} onChange={(e) => setNombre(e.target.value)} /></Form.Group>
+        <Form.Group controlId='email' className='mb-3'><Form.Label>Email</Form.Label><Form.Control type='email' placeholder='Ingresa tu email' value={email} onChange={(e) => setEmail(e.target.value)} /></Form.Group>
+        <Form.Group controlId='password' className='mb-3'><Form.Label>Nueva Contraseña (opcional)</Form.Label><Form.Control type='password' placeholder='Ingresa tu nueva contraseña' value={password} onChange={(e) => setPassword(e.target.value)} /></Form.Group>
+        <Form.Group controlId='confirmPassword' className='mb-3'><Form.Label>Confirmar Nueva Contraseña</Form.Label><Form.Control type='password' placeholder='Confirma la nueva contraseña' value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} /></Form.Group>
+        <Button type='submit' variant='primary' className='w-100'>Actualizar</Button>
       </Form>
     </Card>
   );
 };
 
-// Paneles simulados para las otras secciones
-const ProductPanel = () => <Card className="p-4 border-0"><h2>Panel de Productos</h2><p>Aquí podrás ver, crear, editar y eliminar tus productos.</p></Card>;
+// Panel de Productos (con lógica para editar y eliminar)
+const ProductPanel = () => {
+  const { userInfo } = useContext(AuthContext);
+  const navigate = useNavigate();
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [loadingCreate, setLoadingCreate] = useState(false);
+
+  const loadMyProducts = async () => {
+    try {
+      setLoading(true);
+      const data = await productService.getMyProducts(userInfo.token);
+      setProducts(data);
+    } catch (err) {
+      setError('No se pudieron cargar tus productos.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (userInfo) {
+      loadMyProducts();
+    }
+  }, [userInfo]);
+
+  const createProductHandler = async () => {
+    setLoadingCreate(true);
+    try {
+      const newProduct = await productService.createProduct(userInfo.token);
+      navigate(`/tienda/producto/${newProduct._id}/edit`);
+    } catch (err) {
+      setError('No se pudo crear el producto.');
+      setLoadingCreate(false);
+    }
+  };
+
+  const deleteHandler = async (id) => {
+    if (window.confirm('¿Estás seguro de que quieres eliminar este producto? Esta acción es irreversible.')) {
+      try {
+        await productService.deleteProduct(id, userInfo.token);
+        loadMyProducts(); // Recargamos la lista de productos para que se refleje el cambio
+      } catch (err) {
+        setError('No se pudo eliminar el producto.');
+      }
+    }
+  };
+
+  return (
+    <Card className="p-4 border-0">
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2>Panel de Productos</h2>
+        <Button variant="primary" onClick={createProductHandler} disabled={loadingCreate}>
+          {loadingCreate ? <Spinner as="span" animation="border" size="sm" /> : <FontAwesomeIcon icon={faPlus} className="me-2" />}
+          Crear Producto
+        </Button>
+      </div>
+      {loading ? <div className="text-center"><Spinner animation="border" /></div> : error ? <Alert variant="danger">{error}</Alert> : (
+        <Table striped bordered hover responsive>
+          <thead>
+            <tr><th>ID</th><th>NOMBRE</th><th>PRECIO</th><th>CATEGORÍA</th><th>STOCK</th><th>ACCIONES</th></tr>
+          </thead>
+          <tbody>
+            {products.map((product) => (
+              <tr key={product._id}>
+                <td>{product._id}</td>
+                <td>{product.nombre}</td>
+                <td>₡{product.precio.toLocaleString('es-CR')}</td>
+                <td>{product.categoria}</td>
+                <td>{product.stock}</td>
+                <td>
+                  <Button as={Link} to={`/tienda/producto/${product._id}/edit`} variant="light" size="sm" className="me-2">
+                    <FontAwesomeIcon icon={faEdit} />
+                  </Button>
+                  <Button variant="danger" size="sm" onClick={() => deleteHandler(product._id)}>
+                    <FontAwesomeIcon icon={faTrash} />
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      )}
+    </Card>
+  );
+};
+
+// Paneles simulados
 const PaymentMethodsPanel = () => <Card className="p-4 border-0"><h2>Métodos de Pago</h2><p>Aquí podrás gestionar tus tarjetas.</p></Card>;
 const ShippingAddressesPanel = () => <Card className="p-4 border-0"><h2>Direcciones de Envío</h2><p>Aquí podrás gestionar tus direcciones.</p></Card>;
 const PurchaseHistoryPanel = () => <Card className="p-4 border-0"><h2>Historial de Compras</h2><p>Aquí verás tus compras anteriores.</p></Card>;
 
-
+// Componente Principal
 const ProfilePage = () => {
   const { userInfo } = useContext(AuthContext);
   const [activePanel, setActivePanel] = useState('info');
 
-  if (!userInfo) {
-    return <Container className="my-4"><Alert variant="warning">Debes iniciar sesión para ver tu perfil.</Alert></Container>;
-  }
+  if (!userInfo) { return <Container className="my-4"><Alert variant="warning">Debes iniciar sesión para ver tu perfil.</Alert></Container>; }
 
   const renderPanel = () => {
     switch (activePanel) {
-      case 'info':
-        return <PersonalInfoPanel />;
-      case 'products':
-        return <ProductPanel />;
-      case 'payments':
-        return <PaymentMethodsPanel />;
-      case 'addresses':
-        return <ShippingAddressesPanel />;
-      case 'history':
-        return <PurchaseHistoryPanel />;
-      default:
-        return <PersonalInfoPanel />;
+      case 'info': return <PersonalInfoPanel />;
+      case 'products': return <ProductPanel />;
+      case 'payments': return <PaymentMethodsPanel />;
+      case 'addresses': return <ShippingAddressesPanel />;
+      case 'history': return <PurchaseHistoryPanel />;
+      default: return <PersonalInfoPanel />;
     }
   };
 
   return (
     <Container fluid className="profile-page-container my-4">
       <Row>
-        {/* Columna del Menú de Navegación (Sidebar) */}
         <Col md={3}>
           <div className="profile-sidebar">
-            <h4 className="sidebar-title">
-              {userInfo.tipoUsuario === 'tienda' ? 'Panel de Tienda' : 'Mi Cuenta'}
-            </h4>
+            <h4 className="sidebar-title">{userInfo.tipoUsuario === 'tienda' ? 'Panel de Tienda' : 'Mi Cuenta'}</h4>
             <Nav className="flex-column profile-nav">
-              <Nav.Link 
-                className={`profile-nav-link ${activePanel === 'info' ? 'active' : ''}`}
-                onClick={() => setActivePanel('info')}
-              >
-                <FontAwesomeIcon icon={faUser} className="me-2" />
-                Información Personal
-              </Nav.Link>
-
-              {userInfo.tipoUsuario === 'tienda' && (
-                <Nav.Link 
-                  className={`profile-nav-link ${activePanel === 'products' ? 'active' : ''}`}
-                  onClick={() => setActivePanel('products')}
-                >
-                  <FontAwesomeIcon icon={faBoxOpen} className="me-2" />
-                  Panel de Productos
-                </Nav.Link>
-              )}
-
+              <Nav.Link className={`profile-nav-link ${activePanel === 'info' ? 'active' : ''}`} onClick={() => setActivePanel('info')}><FontAwesomeIcon icon={faUser} className="me-2" />Información Personal</Nav.Link>
+              {userInfo.tipoUsuario === 'tienda' && (<Nav.Link className={`profile-nav-link ${activePanel === 'products' ? 'active' : ''}`} onClick={() => setActivePanel('products')}><FontAwesomeIcon icon={faBoxOpen} className="me-2" />Panel de Productos</Nav.Link>)}
               {userInfo.tipoUsuario === 'comprador' && (
                 <>
-                  <Nav.Link 
-                    className={`profile-nav-link ${activePanel === 'addresses' ? 'active' : ''}`}
-                    onClick={() => setActivePanel('addresses')}
-                  >
-                    <FontAwesomeIcon icon={faMapMarkerAlt} className="me-2" />
-                    Direcciones de Envío
-                  </Nav.Link>
-                  <Nav.Link 
-                    className={`profile-nav-link ${activePanel === 'payments' ? 'active' : ''}`}
-                    onClick={() => setActivePanel('payments')}
-                  >
-                    <FontAwesomeIcon icon={faCreditCard} className="me-2" />
-                    Métodos de Pago
-                  </Nav.Link>
-                   <Nav.Link 
-                    className={`profile-nav-link ${activePanel === 'history' ? 'active' : ''}`}
-                    onClick={() => setActivePanel('history')}
-                  >
-                    <FontAwesomeIcon icon={faHistory} className="me-2" />
-                    Historial de Compras
-                  </Nav.Link>
+                  <Nav.Link className={`profile-nav-link ${activePanel === 'addresses' ? 'active' : ''}`} onClick={() => setActivePanel('addresses')}><FontAwesomeIcon icon={faMapMarkerAlt} className="me-2" />Direcciones de Envío</Nav.Link>
+                  <Nav.Link className={`profile-nav-link ${activePanel === 'payments' ? 'active' : ''}`} onClick={() => setActivePanel('payments')}><FontAwesomeIcon icon={faCreditCard} className="me-2" />Métodos de Pago</Nav.Link>
+                   <Nav.Link className={`profile-nav-link ${activePanel === 'history' ? 'active' : ''}`} onClick={() => setActivePanel('history')}><FontAwesomeIcon icon={faHistory} className="me-2" />Historial de Compras</Nav.Link>
                 </>
               )}
             </Nav>
           </div>
         </Col>
-
-        {/* Columna del Contenido Principal */}
-        <Col md={9}>
-          <div className="profile-content">
-            {renderPanel()}
-          </div>
-        </Col>
+        <Col md={9}><div className="profile-content">{renderPanel()}</div></Col>
       </Row>
     </Container>
   );
