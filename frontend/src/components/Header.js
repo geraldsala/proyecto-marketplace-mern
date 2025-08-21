@@ -1,12 +1,13 @@
+// frontend/src/components/Header.js
+
 import React, { useContext } from 'react';
 import { LinkContainer } from 'react-router-bootstrap';
 import { Navbar, Nav, Container, NavDropdown, Form, Button } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-// Importamos solo los iconos que necesitamos
 import { 
   faMicrochip, faShoppingCart, faUser, faStore, faSearch, 
   faLaptop, faHeadphones, faMobileAlt, faHome, faSignOutAlt, 
-  faUserCog, faHistory, faHeart   // 👈 agregado faHeart
+  faUserCog, faHistory 
 } from '@fortawesome/free-solid-svg-icons';
 import AuthContext from '../context/AuthContext';
 import './Header.css';
@@ -36,44 +37,30 @@ const Header = () => {
               <LinkContainer to="/celulares"><Nav.Link><FontAwesomeIcon icon={faMobileAlt} className="me-1" /> Celulares</Nav.Link></LinkContainer>
               <LinkContainer to="/smarthome"><Nav.Link><FontAwesomeIcon icon={faHome} className="me-1" /> Smart Home</Nav.Link></LinkContainer>
             </Nav>
-
             <Nav className="nav-icons">
-              {/* 👇 Wishlist antes del carrito */}
-              <LinkContainer to="/wishlist">
-                <Nav.Link className="position-relative">
-                  <FontAwesomeIcon icon={faHeart} size="lg" />
-                </Nav.Link>
-              </LinkContainer>
-
-              <LinkContainer to="/cart">
-                <Nav.Link className="position-relative">
-                  <FontAwesomeIcon icon={faShoppingCart} size="lg" />
-                </Nav.Link>
-              </LinkContainer>
-
+              <LinkContainer to="/cart"><Nav.Link className="position-relative"><FontAwesomeIcon icon={faShoppingCart} size="lg" /></Nav.Link></LinkContainer>
               {userInfo ? (
                 <NavDropdown title={<FontAwesomeIcon icon={faUser} size="lg" />} id="username-dropdown" align="end">
                   <NavDropdown.Header>Hola, {userInfo.nombre}</NavDropdown.Header>
-                  <LinkContainer to="/profile">
-                    <NavDropdown.Item><FontAwesomeIcon icon={faUser} className='me-2' />Mi Perfil</NavDropdown.Item>
-                  </LinkContainer>
                   
-                  {userInfo.tipoUsuario === 'comprador' && (
-                    <LinkContainer to='/purchase-history'>
-                      <NavDropdown.Item><FontAwesomeIcon icon={faHistory} className='me-2' /> Mis Compras</NavDropdown.Item>
-                    </LinkContainer>
-                  )}
-                  {userInfo.tipoUsuario === 'tienda' && (
-                    <LinkContainer to="/store-panel">
-                      <NavDropdown.Item><FontAwesomeIcon icon={faStore} className="me-2" /> Panel de Tienda</NavDropdown.Item>
-                    </LinkContainer>
-                  )}
+                  {/* --- INICIO DE LA CORRECCIÓN --- */}
+                  {/* Un solo enlace al panel, con texto dinámico */}
+                  <LinkContainer to="/panel">
+                    <NavDropdown.Item>
+                      {userInfo.tipoUsuario === 'tienda' ? (
+                        <><FontAwesomeIcon icon={faStore} className='me-2' />Panel de Tienda</>
+                      ) : (
+                        <><FontAwesomeIcon icon={faUser} className='me-2' />Mi Perfil</>
+                      )}
+                    </NavDropdown.Item>
+                  </LinkContainer>
+                  {/* --- FIN DE LA CORRECCIÓN --- */}
+                  
                   {userInfo.tipoUsuario === 'admin' && (
                      <LinkContainer to='/admin'>
                        <NavDropdown.Item><FontAwesomeIcon icon={faUserCog} className='me-2' /> Panel Admin</NavDropdown.Item>
                     </LinkContainer>
                   )}
-                  
                   <NavDropdown.Divider />
                   <NavDropdown.Item onClick={logoutHandler}>
                     <FontAwesomeIcon icon={faSignOutAlt} className="me-2" />Cerrar Sesión
@@ -81,9 +68,7 @@ const Header = () => {
                 </NavDropdown>
               ) : (
                 <LinkContainer to="/login">
-                  <Nav.Link>
-                    <FontAwesomeIcon icon={faUser} size="lg" />
-                  </Nav.Link>
+                  <Nav.Link><FontAwesomeIcon icon={faUser} size="lg" /></Nav.Link>
                 </LinkContainer>
               )}
             </Nav>

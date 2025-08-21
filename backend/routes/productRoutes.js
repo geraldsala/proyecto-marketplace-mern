@@ -1,21 +1,26 @@
-import express from 'express';
+const express = require('express');
 const router = express.Router();
-import {
+const {
   getProducts,
   getProductById,
   createProduct,
   updateProduct,
   deleteProduct,
-} from '../controllers/productController.js';
-import { protect } from '../middleware/authMiddleware.js'; // Asegúrate de que la ruta a tu middleware es correcta
+  getMyProducts,
+} = require('../controllers/productController.js');
+const { protect } = require('../middlewares/authMiddleware.js');
 
-// Rutas públicas
-router.get('/', getProducts);
-router.get('/:id', getProductById);
+// --- Rutas Públicas ---
+router.route('/').get(getProducts);
 
-// Rutas protegidas (solo para usuarios autenticados)
-router.post('/', protect, createProduct);
-router.put('/:id', protect, updateProduct);
-router.delete('/:id', protect, deleteProduct);
+// --- Rutas Protegidas (Requieren Login) ---
+router.route('/').post(protect, createProduct);
+router.route('/myproducts').get(protect, getMyProducts);
 
-export default router;
+// --- Rutas con ID (deben ir al final) ---
+router.route('/:id')
+  .get(getProductById)
+  .put(protect, updateProduct)
+  .delete(protect, deleteProduct);
+
+module.exports = router;

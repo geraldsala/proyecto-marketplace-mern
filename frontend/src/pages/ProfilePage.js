@@ -10,7 +10,7 @@ import './ProfilePage.css';
 
 // --- PANELES DE CONTENIDO ---
 
-// Panel de Información Personal (sin cambios)
+// Panel #1: Información Personal
 const PersonalInfoPanel = () => {
   const { userInfo, login } = useContext(AuthContext);
   const [nombre, setNombre] = useState('');
@@ -20,19 +20,37 @@ const PersonalInfoPanel = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  useEffect(() => { if (userInfo) { setNombre(userInfo.nombre); setEmail(userInfo.email); } }, [userInfo]);
+  useEffect(() => {
+    if (userInfo) {
+      setNombre(userInfo.nombre);
+      setEmail(userInfo.email);
+    }
+  }, [userInfo]);
 
   const submitHandler = async (e) => {
     e.preventDefault();
-    if (password && password !== confirmPassword) { setError('Las contraseñas no coinciden'); return; }
-    setError(''); setSuccess('');
+    if (password && password !== confirmPassword) {
+      setError('Las contraseñas no coinciden');
+      return;
+    }
+    setError('');
+    setSuccess('');
     try {
-      const config = { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userInfo.token}` } };
+      const config = {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${userInfo.token}`,
+        },
+      };
+      // Nota: Esta ruta debe existir en tu backend (ej: userRoutes.js)
       const { data } = await axios.put('http://localhost:5000/api/users/profile', { nombre, email, password }, config);
-      login(data);
+      login(data); // Actualiza el contexto y localStorage con los nuevos datos
       setSuccess('Perfil actualizado correctamente');
-      setPassword(''); setConfirmPassword('');
-    } catch (err) { setError(err.response?.data?.message || 'Ocurrió un error inesperado'); }
+      setPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Ocurrió un error inesperado');
+    }
   };
 
   return (
@@ -51,7 +69,7 @@ const PersonalInfoPanel = () => {
   );
 };
 
-// Panel de Productos (con lógica para editar y eliminar)
+// Panel #2: Gestión de Productos (para Tiendas)
 const ProductPanel = () => {
   const { userInfo } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -93,7 +111,7 @@ const ProductPanel = () => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este producto? Esta acción es irreversible.')) {
       try {
         await productService.deleteProduct(id, userInfo.token);
-        loadMyProducts(); // Recargamos la lista de productos para que se refleje el cambio
+        loadMyProducts(); // Recarga la lista de productos
       } catch (err) {
         setError('No se pudo eliminar el producto.');
       }
@@ -139,18 +157,21 @@ const ProductPanel = () => {
   );
 };
 
-// Paneles simulados
-const PaymentMethodsPanel = () => <Card className="p-4 border-0"><h2>Métodos de Pago</h2><p>Aquí podrás gestionar tus tarjetas.</p></Card>;
-const ShippingAddressesPanel = () => <Card className="p-4 border-0"><h2>Direcciones de Envío</h2><p>Aquí podrás gestionar tus direcciones.</p></Card>;
-const PurchaseHistoryPanel = () => <Card className="p-4 border-0"><h2>Historial de Compras</h2><p>Aquí verás tus compras anteriores.</p></Card>;
+// Paneles simulados para funcionalidades futuras
+const PaymentMethodsPanel = () => <Card className="p-4 border-0"><h2>Métodos de Pago</h2><p>Próximamente podrás gestionar tus tarjetas aquí.</p></Card>;
+const ShippingAddressesPanel = () => <Card className="p-4 border-0"><h2>Direcciones de Envío</h2><p>Próximamente podrás gestionar tus direcciones aquí.</p></Card>;
+const PurchaseHistoryPanel = () => <Card className="p-4 border-0"><h2>Historial de Compras</h2><p>Próximamente podrás ver tus compras anteriores.</p></Card>;
 
-// Componente Principal
+// --- COMPONENTE PRINCIPAL DE LA PÁGINA ---
 const ProfilePage = () => {
   const { userInfo } = useContext(AuthContext);
-  const [activePanel, setActivePanel] = useState('info');
+  const [activePanel, setActivePanel] = useState(userInfo?.tipoUsuario === 'tienda' ? 'products' : 'info');
 
-  if (!userInfo) { return <Container className="my-4"><Alert variant="warning">Debes iniciar sesión para ver tu perfil.</Alert></Container>; }
+  if (!userInfo) { 
+    return <Container className="my-4"><Alert variant="warning">Debes iniciar sesión para ver tu panel.</Alert></Container>; 
+  }
 
+  // Función para decidir qué panel mostrar
   const renderPanel = () => {
     switch (activePanel) {
       case 'info': return <PersonalInfoPanel />;
@@ -165,23 +186,41 @@ const ProfilePage = () => {
   return (
     <Container fluid className="profile-page-container my-4">
       <Row>
+        {/* Menú Lateral (Sidebar) */}
         <Col md={3}>
           <div className="profile-sidebar">
             <h4 className="sidebar-title">{userInfo.tipoUsuario === 'tienda' ? 'Panel de Tienda' : 'Mi Cuenta'}</h4>
             <Nav className="flex-column profile-nav">
-              <Nav.Link className={`profile-nav-link ${activePanel === 'info' ? 'active' : ''}`} onClick={() => setActivePanel('info')}><FontAwesomeIcon icon={faUser} className="me-2" />Información Personal</Nav.Link>
-              {userInfo.tipoUsuario === 'tienda' && (<Nav.Link className={`profile-nav-link ${activePanel === 'products' ? 'active' : ''}`} onClick={() => setActivePanel('products')}><FontAwesomeIcon icon={faBoxOpen} className="me-2" />Panel de Productos</Nav.Link>)}
+              <Nav.Link className={`profile-nav-link ${activePanel === 'info' ? 'active' : ''}`} onClick={() => setActivePanel('info')}>
+                <FontAwesomeIcon icon={faUser} className="me-2" />Información Personal
+              </Nav.Link>
+              {userInfo.tipoUsuario === 'tienda' && (
+                <Nav.Link className={`profile-nav-link ${activePanel === 'products' ? 'active' : ''}`} onClick={() => setActivePanel('products')}>
+                  <FontAwesomeIcon icon={faBoxOpen} className="me-2" />Panel de Productos
+                </Nav.Link>
+              )}
               {userInfo.tipoUsuario === 'comprador' && (
                 <>
-                  <Nav.Link className={`profile-nav-link ${activePanel === 'addresses' ? 'active' : ''}`} onClick={() => setActivePanel('addresses')}><FontAwesomeIcon icon={faMapMarkerAlt} className="me-2" />Direcciones de Envío</Nav.Link>
-                  <Nav.Link className={`profile-nav-link ${activePanel === 'payments' ? 'active' : ''}`} onClick={() => setActivePanel('payments')}><FontAwesomeIcon icon={faCreditCard} className="me-2" />Métodos de Pago</Nav.Link>
-                   <Nav.Link className={`profile-nav-link ${activePanel === 'history' ? 'active' : ''}`} onClick={() => setActivePanel('history')}><FontAwesomeIcon icon={faHistory} className="me-2" />Historial de Compras</Nav.Link>
+                  <Nav.Link className={`profile-nav-link ${activePanel === 'addresses' ? 'active' : ''}`} onClick={() => setActivePanel('addresses')}>
+                    <FontAwesomeIcon icon={faMapMarkerAlt} className="me-2" />Direcciones de Envío
+                  </Nav.Link>
+                  <Nav.Link className={`profile-nav-link ${activePanel === 'payments' ? 'active' : ''}`} onClick={() => setActivePanel('payments')}>
+                    <FontAwesomeIcon icon={faCreditCard} className="me-2" />Métodos de Pago
+                  </Nav.Link>
+                   <Nav.Link className={`profile-nav-link ${activePanel === 'history' ? 'active' : ''}`} onClick={() => setActivePanel('history')}>
+                    <FontAwesomeIcon icon={faHistory} className="me-2" />Historial de Compras
+                  </Nav.Link>
                 </>
               )}
             </Nav>
           </div>
         </Col>
-        <Col md={9}><div className="profile-content">{renderPanel()}</div></Col>
+        {/* Contenido Principal */}
+        <Col md={9}>
+          <div className="profile-content">
+            {renderPanel()}
+          </div>
+        </Col>
       </Row>
     </Container>
   );

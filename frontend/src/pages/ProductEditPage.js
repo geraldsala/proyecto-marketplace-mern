@@ -9,7 +9,6 @@ const ProductEditPage = () => {
   const navigate = useNavigate();
   const { userInfo } = useContext(AuthContext);
 
-  // Lista de categorías y estados válidos
   const categories = ['Laptops', 'Audio', 'Celulares', 'Smart Home'];
   const productStates = ['nuevo', 'usado', 'reacondicionado'];
 
@@ -21,11 +20,7 @@ const ProductEditPage = () => {
     stock: 0,
     descripcion: '',
     estado: 'nuevo',
-    especificacionesTecnicas: {
-        modelo: '',
-        ram: '',
-        compatibilidad: ''
-    }
+    especificacionesTecnicas: { modelo: '', ram: '', compatibilidad: '' }
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -34,10 +29,8 @@ const ProductEditPage = () => {
     const fetchProduct = async () => {
       try {
         const data = await productService.getProductById(productId);
-        // Inicializamos campos si no existen para evitar errores
         if (!Array.isArray(data.imagenes)) data.imagenes = [];
         if (!data.especificacionesTecnicas) data.especificacionesTecnicas = { modelo: '', ram: '', compatibilidad: '' };
-        
         setProduct(data);
         setLoading(false);
       } catch (err) {
@@ -52,7 +45,7 @@ const ProductEditPage = () => {
     e.preventDefault();
     try {
       await productService.updateProduct(productId, product, userInfo.token);
-      navigate('/profile');
+      navigate('/panel'); // CORRECCIÓN: Redirige a /panel
     } catch (err) {
       setError('No se pudo actualizar el producto.');
     }
@@ -63,7 +56,6 @@ const ProductEditPage = () => {
     setProduct({ ...product, [name]: value });
   };
   
-  // Handler especial para los campos anidados de especificaciones
   const onSpecsChange = (e) => {
     const { name, value } = e.target;
     setProduct(prevState => ({
@@ -81,7 +73,8 @@ const ProductEditPage = () => {
 
   return (
     <Container className="py-4">
-      <Link to="/profile" className="btn btn-light my-3">
+      {/* CORRECCIÓN: El enlace ahora apunta a /panel */}
+      <Link to="/panel" className="btn btn-light my-3">
         Volver al Panel
       </Link>
       <Row className="justify-content-md-center">
@@ -90,7 +83,6 @@ const ProductEditPage = () => {
             <h1>Editar Producto</h1>
             {error && <Alert variant="danger">{error}</Alert>}
             <Form onSubmit={submitHandler}>
-              
               <h5 className="mt-4 mb-3">Información General</h5>
               <Form.Group controlId="nombre" className="mb-3">
                 <Form.Label>Nombre del Producto</Form.Label>
@@ -106,7 +98,6 @@ const ProductEditPage = () => {
                   onChange={(e) => setProduct({...product, imagenes: e.target.value.split(',').map(img => img.trim())})}
                 />
               </Form.Group>
-
               <hr />
               <h5 className="mt-4 mb-3">Detalles del Producto</h5>
               <Row>
@@ -142,7 +133,6 @@ const ProductEditPage = () => {
                   </Form.Group>
                 </Col>
               </Row>
-
               <hr />
               <h5 className="mt-4 mb-3">Especificaciones Técnicas</h5>
               <Form.Group controlId="modelo" className="mb-3">
@@ -157,7 +147,6 @@ const ProductEditPage = () => {
                 <Form.Label>Compatibilidad</Form.Label>
                 <Form.Control type="text" name="compatibilidad" value={product.especificacionesTecnicas.compatibilidad} onChange={onSpecsChange} />
               </Form.Group>
-
               <Button type="submit" variant="primary" className="w-100 mt-3">
                 Actualizar Producto
               </Button>

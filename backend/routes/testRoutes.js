@@ -1,8 +1,9 @@
-// backend/routes/testRoutes.js
 const express = require('express');
 const router = express.Router();
 const asyncHandler = require('express-async-handler');
-const protect = require('../middlewares/authMiddleware');
+// --- LA CORRECCIÓN ESTÁ AQUÍ ---
+// Desestructuramos para obtener la función 'protect' directamente
+const { protect } = require('../middlewares/authMiddleware');
 const Order = require('../models/Order');
 
 // @desc    Ruta de prueba para simular una compra
@@ -10,7 +11,7 @@ const Order = require('../models/Order');
 // @access  Private/Comprador
 router.post(
   '/order',
-  protect,
+  protect, // Ahora 'protect' es una función válida
   asyncHandler(async (req, res) => {
     // Si eres un comprador, crea una orden de prueba
     if (req.user.tipoUsuario !== 'comprador') {

@@ -34,12 +34,17 @@ const ProductCard = ({ product }) => {
             <strong>{product.nombre}</strong>
           </Card.Title>
         </Link>
+        
+        {/* --- LÍNEA AÑADIDA --- */}
+        <div className="product-brand text-muted mb-2">{product.brand}</div>
+        {/* -------------------- */}
+
         <Card.Text as="div" className="mt-auto">
           <div className="mb-2">
             <FontAwesomeIcon icon={faTruckFast} className="me-2" color="var(--accent-primary)" />
             <small className="text-muted">{product.tiempoEnvio}</small>
           </div>
-          {/* --- LA CORRECCIÓN ESTÁ AQUÍ --- */}
+          
           <h3 className="product-price">
             ₡{product.precio.toLocaleString('es-CR')}
           </h3>

@@ -1,8 +1,9 @@
-// backend/routes/userRoutes.js
 const express = require('express');
 const router = express.Router();
 const asyncHandler = require('express-async-handler');
-const protect = require('../middlewares/authMiddleware');
+// --- LA CORRECCIÓN ESTÁ AQUÍ ---
+// Desestructuramos para obtener la función 'protect' directamente
+const { protect } = require('../middlewares/authMiddleware');
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 
@@ -13,7 +14,7 @@ const bcrypt = require('bcryptjs');
 router
   .route('/profile')
   .get(
-    protect,
+    protect, // Ahora 'protect' es una función válida
     asyncHandler(async (req, res) => {
       const user = await User.findById(req.user._id);
 
