@@ -1,18 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Form, Button, Row, Col, Alert, Container, Spinner } from 'react-bootstrap';
-import authService from '../services/authService';
+import userService from '../services/userService'; // <-- CORRECCIÓN: Importamos el servicio unificado
+import AuthContext from '../context/AuthContext';
 
 const LoginPage = () => {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  });
-  
+  const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  
   const navigate = useNavigate();
+  const { login: contextLogin } = useContext(AuthContext); // Renombramos para evitar conflictos
 
   const { email, password } = formData;
 
@@ -29,9 +26,10 @@ const LoginPage = () => {
     setError('');
 
     try {
-      await authService.login({ email, password });
+      const userData = await userService.login({ email, password }); // <-- CORRECCIÓN: Usamos userService
+      contextLogin(userData); // Actualizamos el contexto global
       navigate('/');
-      window.location.reload(); // Recargamos para que el Header se actualice
+      window.location.reload();
     } catch (err) {
       const message =
         (err.response && err.response.data && err.response.data.message) ||
@@ -61,7 +59,6 @@ const LoginPage = () => {
                 required
               />
             </Form.Group>
-
             <Form.Group className="mb-3" controlId="password">
               <Form.Label>Contraseña</Form.Label>
               <Form.Control
@@ -73,12 +70,10 @@ const LoginPage = () => {
                 required
               />
             </Form.Group>
-
             <Button type="submit" variant="primary" className="mt-3" disabled={loading}>
               {loading ? <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" /> : 'Ingresar'}
             </Button>
           </Form>
-
           <Row className="py-3">
             <Col>
               ¿Eres nuevo?{' '}
