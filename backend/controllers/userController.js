@@ -2,7 +2,7 @@ const asyncHandler = require('express-async-handler');
 const User = require('../models/User.js');
 const generateToken = require('../utils/generateToken.js');
 
-// @desc    Registrar un nuevo usuario
+// --- AUTH FUNCTIONS ---
 const registerUser = asyncHandler(async (req, res) => {
   const { cedula, nombre, nombreUsuario, email, password, tipoUsuario, pais, direccion, telefono, nombreTienda } = req.body;
   const userExists = await User.findOne({ $or: [{ email }, { cedula }] });
@@ -17,7 +17,6 @@ const registerUser = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Autenticar (loguear) un usuario
 const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
   const user = await User.findOne({ email });
@@ -28,7 +27,7 @@ const loginUser = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Obtener el perfil del usuario
+// --- PROFILE FUNCTIONS ---
 const getUserProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
   if (user) {
@@ -38,7 +37,6 @@ const getUserProfile = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Actualizar el perfil del usuario
 const updateUserProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
   if (user) {
@@ -52,15 +50,11 @@ const updateUserProfile = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Añadir una nueva dirección de envío
+// --- ADDRESS FUNCTIONS ---
 const addShippingAddress = asyncHandler(async (req, res) => {
     const { pais, provincia, casillero, codigoPostal, observaciones } = req.body;
     const newAddress = { pais, provincia, casillero, codigoPostal, observaciones };
-    const user = await User.findByIdAndUpdate(
-        req.user._id,
-        { $push: { direccionesEnvio: newAddress } },
-        { new: true, runValidators: true }
-    );
+    const user = await User.findByIdAndUpdate(req.user._id, { $push: { direccionesEnvio: newAddress } }, { new: true, runValidators: true });
     if (user) {
         res.status(201).json(user.direccionesEnvio);
     } else {
@@ -68,13 +62,8 @@ const addShippingAddress = asyncHandler(async (req, res) => {
     }
 });
 
-// @desc    Eliminar una dirección de envío
 const deleteShippingAddress = asyncHandler(async (req, res) => {
-    const user = await User.findByIdAndUpdate(
-        req.user._id,
-        { $pull: { direccionesEnvio: { _id: req.params.addressId } } },
-        { new: true }
-    );
+    const user = await User.findByIdAndUpdate(req.user._id, { $pull: { direccionesEnvio: { _id: req.params.addressId } } }, { new: true });
     if (user) {
         res.json(user.direccionesEnvio);
     } else {
@@ -82,4 +71,29 @@ const deleteShippingAddress = asyncHandler(async (req, res) => {
     }
 });
 
-module.exports = { registerUser, loginUser, getUserProfile, updateUserProfile, addShippingAddress, deleteShippingAddress };
+// --- PAYMENT METHOD FUNCTIONS ---
+const addPaymentMethod = asyncHandler(async (req, res) => {
+    const { nombreTitular, numeroTarjeta, cvv, vencimiento } = req.body;
+    const newPaymentMethod = { nombreTitular, numeroTarjeta, cvv, vencimiento };
+    const user = await User.findByIdAndUpdate(req.user._id, { $push: { formasPago: newPaymentMethod } }, { new: true, runValidators: true });
+    if (user) {
+        res.status(201).json(user.formasPago);
+    } else {
+        res.status(404); throw new Error('Usuario no encontrado');
+    }
+});
+
+const deletePaymentMethod = asyncHandler(async (req, res) => {
+    const user = await User.findByIdAndUpdate(req.user._id, { $pull: { formasPago: { _id: req.params.methodId } } }, { new: true });
+    if (user) {
+        res.json(user.formasPago);
+    } else {
+        res.status(404); throw new Error('Usuario no encontrado');
+    }
+});
+
+module.exports = {
+  registerUser, loginUser, getUserProfile, updateUserProfile,
+  addShippingAddress, deleteShippingAddress,
+  addPaymentMethod, deletePaymentMethod
+};

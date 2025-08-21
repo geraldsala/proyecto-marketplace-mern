@@ -7,6 +7,8 @@ const {
   updateUserProfile,
   addShippingAddress,
   deleteShippingAddress,
+  addPaymentMethod,
+  deletePaymentMethod,
 } = require('../controllers/userController.js');
 const { protect } = require('../middlewares/authMiddleware.js');
 
@@ -22,8 +24,14 @@ router.route('/profile')
 // Rutas para Direcciones de Envío (protegidas)
 router.route('/addresses')
     .post(protect, addShippingAddress);
-
 router.route('/addresses/:addressId')
     .delete(protect, deleteShippingAddress);
+
+// --- RUTAS CORREGIDAS Y AÑADIDAS ---
+// Rutas para Métodos de Pago (protegidas)
+router.route('/paymentmethods')
+    .post(protect, addPaymentMethod);
+router.route('/paymentmethods/:methodId')
+    .delete(protect, deletePaymentMethod);
 
 module.exports = router;

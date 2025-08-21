@@ -1,19 +1,16 @@
-// frontend/src/pages/ProfilePage.js
-
 import React, { useState, useEffect, useContext } from 'react';
 import { Container, Row, Col, Nav, Form, Button, Alert, Card, Table, Spinner, ListGroup } from 'react-bootstrap';
 import { useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faBoxOpen, faCreditCard, faMapMarkerAlt, faHistory, faEdit, faTrash, faPlus } from '@fortawesome/free-solid-svg-icons';
-import axios from 'axios';
 import AuthContext from '../context/AuthContext';
 import productService from '../services/productService';
-import userService from '../services/userService'; // <-- Importamos el nuevo servicio
+import userService from '../services/userService';
 import './ProfilePage.css';
 
 // --- PANELES DE CONTENIDO ---
 
-// Panel #1: Información Personal (sin cambios)
+// Panel #1: Información Personal
 const PersonalInfoPanel = () => {
   const { userInfo, login } = useContext(AuthContext);
   const [nombre, setNombre] = useState('');
@@ -30,8 +27,7 @@ const PersonalInfoPanel = () => {
     if (password && password !== confirmPassword) { setError('Las contraseñas no coinciden'); return; }
     setError(''); setSuccess('');
     try {
-      const config = { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userInfo.token}` } };
-      const { data } = await axios.put('http://localhost:5000/api/users/profile', { nombre, email, password }, config);
+      const { data } = await userService.updateProfile({ nombre, email, password }, userInfo.token);
       login(data);
       setSuccess('Perfil actualizado correctamente');
       setPassword(''); setConfirmPassword('');
@@ -54,7 +50,7 @@ const PersonalInfoPanel = () => {
   );
 };
 
-// Panel #2: Gestión de Productos (sin cambios)
+// Panel #2: Gestión de Productos (para Tiendas)
 const ProductPanel = () => {
   const { userInfo } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -107,7 +103,6 @@ const ProductPanel = () => {
   );
 };
 
-// --- NUEVO PANEL FUNCIONAL ---
 // Panel #3: Direcciones de Envío (para Compradores)
 const ShippingAddressesPanel = () => {
     const { userInfo } = useContext(AuthContext);
@@ -135,7 +130,7 @@ const ShippingAddressesPanel = () => {
         try {
             const updatedAddresses = await userService.addShippingAddress(newAddress, userInfo.token);
             setAddresses(updatedAddresses);
-            setNewAddress({ pais: '', provincia: '', casillero: '', codigoPostal: '', observaciones: '' }); // Limpiar formulario
+            setNewAddress({ pais: '', provincia: '', casillero: '', codigoPostal: '', observaciones: '' });
         } catch (err) {
             setError('No se pudo añadir la dirección.');
         }
@@ -160,7 +155,6 @@ const ShippingAddressesPanel = () => {
         <Card className="p-4 border-0">
             <h2 className='mb-4'>Direcciones de Envío</h2>
             {error && <Alert variant="danger">{error}</Alert>}
-            
             <h5 className="mb-3">Añadir Nueva Dirección</h5>
             <Form onSubmit={handleAddAddress} className="mb-5">
                 <Row>
@@ -174,13 +168,10 @@ const ShippingAddressesPanel = () => {
                 <Form.Group className="mb-3"><Form.Label>Observaciones</Form.Label><Form.Control as="textarea" rows={2} name="observaciones" value={newAddress.observaciones} onChange={handleFormChange} /></Form.Group>
                 <Button type="submit" variant="primary">Añadir Dirección</Button>
             </Form>
-
             <h5 className="mb-3">Mis Direcciones Guardadas</h5>
             {loading ? <Spinner animation="border" /> : (
                 <ListGroup>
-                    {addresses.length === 0 ? (
-                        <ListGroup.Item>No tienes direcciones guardadas.</ListGroup.Item>
-                    ) : (
+                    {addresses.length === 0 ? <ListGroup.Item>No tienes direcciones guardadas.</ListGroup.Item> : (
                         addresses.map(addr => (
                             <ListGroup.Item key={addr._id} className="d-flex justify-content-between align-items-start">
                                 <div>
@@ -188,9 +179,7 @@ const ShippingAddressesPanel = () => {
                                     <small className="text-muted">{addr.codigoPostal} {addr.casillero && `- Casillero ${addr.casillero}`}</small><br/>
                                     <small>{addr.observaciones}</small>
                                 </div>
-                                <Button variant="outline-danger" size="sm" onClick={() => handleDeleteAddress(addr._id)}>
-                                    <FontAwesomeIcon icon={faTrash} />
-                                </Button>
+                                <Button variant="outline-danger" size="sm" onClick={() => handleDeleteAddress(addr._id)}><FontAwesomeIcon icon={faTrash} /></Button>
                             </ListGroup.Item>
                         ))
                     )}
@@ -200,9 +189,95 @@ const ShippingAddressesPanel = () => {
     );
 };
 
+// Panel #4: Métodos de Pago (para Compradores)
+const PaymentMethodsPanel = () => {
+    const { userInfo } = useContext(AuthContext);
+    const [paymentMethods, setPaymentMethods] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [newMethod, setNewMethod] = useState({ nombreTitular: '', numeroTarjeta: '', cvv: '', vencimiento: '' });
 
-// Paneles simulados para funcionalidades futuras
-const PaymentMethodsPanel = () => <Card className="p-4 border-0"><h2>Métodos de Pago</h2><p>Próximamente podrás gestionar tus tarjetas aquí.</p></Card>;
+    useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                const profile = await userService.getProfile(userInfo.token);
+                setPaymentMethods(profile.formasPago);
+            } catch (err) {
+                setError('No se pudieron cargar los métodos de pago.');
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchProfile();
+    }, [userInfo.token]);
+
+    const handleAddMethod = async (e) => {
+        e.preventDefault();
+        try {
+            const updatedMethods = await userService.addPaymentMethod(newMethod, userInfo.token);
+            setPaymentMethods(updatedMethods);
+            setNewMethod({ nombreTitular: '', numeroTarjeta: '', cvv: '', vencimiento: '' });
+        } catch (err) {
+            setError('No se pudo añadir el método de pago.');
+        }
+    };
+
+    const handleDeleteMethod = async (methodId) => {
+        if (window.confirm('¿Estás seguro de que quieres eliminar este método de pago?')) {
+            try {
+                const updatedMethods = await userService.deletePaymentMethod(methodId, userInfo.token);
+                setPaymentMethods(updatedMethods);
+            } catch (err) {
+                setError('No se pudo eliminar el método de pago.');
+            }
+        }
+    };
+
+    const handleFormChange = (e) => {
+        setNewMethod({ ...newMethod, [e.target.name]: e.target.value });
+    };
+
+    const maskCardNumber = (number) => {
+        if (!number) return '';
+        return `**** **** **** ${number.slice(-4)}`;
+    };
+
+    return (
+        <Card className="p-4 border-0">
+            <h2 className='mb-4'>Métodos de Pago</h2>
+            {error && <Alert variant="danger">{error}</Alert>}
+            <h5 className="mb-3">Añadir Nueva Tarjeta</h5>
+            <Form onSubmit={handleAddMethod} className="mb-5">
+                <Form.Group className="mb-3"><Form.Label>Nombre del Titular</Form.Label><Form.Control type="text" name="nombreTitular" value={newMethod.nombreTitular} onChange={handleFormChange} required /></Form.Group>
+                <Row>
+                    <Col md={6}><Form.Group className="mb-3"><Form.Label>Número de Tarjeta</Form.Label><Form.Control type="text" name="numeroTarjeta" value={newMethod.numeroTarjeta} onChange={handleFormChange} required /></Form.Group></Col>
+                    <Col md={3}><Form.Group className="mb-3"><Form.Label>Vencimiento (MM/AA)</Form.Label><Form.Control type="text" name="vencimiento" value={newMethod.vencimiento} onChange={handleFormChange} required /></Form.Group></Col>
+                    <Col md={3}><Form.Group className="mb-3"><Form.Label>CVV</Form.Label><Form.Control type="text" name="cvv" value={newMethod.cvv} onChange={handleFormChange} required /></Form.Group></Col>
+                </Row>
+                <Button type="submit" variant="primary">Añadir Tarjeta</Button>
+            </Form>
+            <h5 className="mb-3">Mis Tarjetas Guardadas</h5>
+            {loading ? <Spinner animation="border" /> : (
+                <ListGroup>
+                    {paymentMethods.length === 0 ? <ListGroup.Item>No tienes métodos de pago guardados.</ListGroup.Item> : (
+                        paymentMethods.map(method => (
+                            <ListGroup.Item key={method._id} className="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{method.nombreTitular}</strong><br />
+                                    <span className="text-muted font-monospace">{maskCardNumber(method.numeroTarjeta)}</span>
+                                    <span className="ms-3 text-muted">Vence: {method.vencimiento}</span>
+                                </div>
+                                <Button variant="outline-danger" size="sm" onClick={() => handleDeleteMethod(method._id)}><FontAwesomeIcon icon={faTrash} /></Button>
+                            </ListGroup.Item>
+                        ))
+                    )}
+                </ListGroup>
+            )}
+        </Card>
+    );
+};
+
+// Panel simulado para el historial
 const PurchaseHistoryPanel = () => <Card className="p-4 border-0"><h2>Historial de Compras</h2><p>Próximamente podrás ver tus compras anteriores.</p></Card>;
 
 // --- COMPONENTE PRINCIPAL DE LA PÁGINA ---

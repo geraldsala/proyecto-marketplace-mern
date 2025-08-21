@@ -1,7 +1,6 @@
-// frontend/src/services/userService.js
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api/users'; // URL única para todo
+const API_URL = 'http://localhost:5000/api/users';
 
 // --- Funciones de Autenticación ---
 const register = async (userData) => {
@@ -31,6 +30,7 @@ const getProfile = async (token) => {
   return data;
 };
 
+// --- Funciones de Direcciones ---
 const addShippingAddress = async (addressData, token) => {
   const config = { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } };
   const { data } = await axios.post(`${API_URL}/addresses`, addressData, config);
@@ -43,6 +43,20 @@ const deleteShippingAddress = async (addressId, token) => {
   return data;
 };
 
+// --- NUEVAS FUNCIONES DE MÉTODOS DE PAGO ---
+const addPaymentMethod = async (paymentData, token) => {
+    const config = { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } };
+    const { data } = await axios.post(`${API_URL}/paymentmethods`, paymentData, config);
+    return data;
+};
+
+const deletePaymentMethod = async (methodId, token) => {
+    const config = { headers: { Authorization: `Bearer ${token}` } };
+    const { data } = await axios.delete(`${API_URL}/paymentmethods/${methodId}`, config);
+    return data;
+};
+
+
 const userService = {
   register,
   login,
@@ -50,6 +64,8 @@ const userService = {
   getProfile,
   addShippingAddress,
   deleteShippingAddress,
+  addPaymentMethod,      // <-- Añadido
+  deletePaymentMethod,   // <-- Añadido
 };
 
 export default userService;
