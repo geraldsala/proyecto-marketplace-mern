@@ -1,4 +1,5 @@
 // frontend/src/pages/detallesmart.js
+// frontend/src/pages/detallesmart.js
 import React, { useMemo, useState, useEffect } from 'react';
 import { Container, Row, Col, Button, Form, Badge, Alert, Spinner, Modal } from 'react-bootstrap';
 import { useParams } from 'react-router-dom';
@@ -33,6 +34,16 @@ function addReport(productId) {
 }
 function isDisabledByReports(productId) {
   return getReportCount(productId) >= 10;
+}
+
+/* --------------------- Helpers de wishlist (fallback) ------------------ */
+const WL_KEY = 'wishlist:ids';
+function wlGetSet() {
+  try { return new Set(JSON.parse(localStorage.getItem(WL_KEY) || '[]')); }
+  catch { return new Set(); }
+}
+function wlSave(set) {
+  localStorage.setItem(WL_KEY, JSON.stringify([...set]));
 }
 
 /** Estrellas reutilizables (permiten calificar con onRate) */
@@ -77,6 +88,11 @@ export default function DetallesSmart() {
   const [reportCount, setReportCount] = useState(0);
   const [isDisabled, setIsDisabled] = useState(false);
 
+  // Wishlist (igual que detalleslap)
+  const [inWishlist, setInWishlist] = useState(false);
+  const [wishMsg, setWishMsg] = useState('');
+  const [wishLoading, setWishLoading] = useState(false);
+
   useEffect(() => {
     let isMounted = true;
     (async () => {
@@ -90,7 +106,9 @@ export default function DetallesSmart() {
           id: String(data?._id ?? data?.id ?? id),
           nombre: data?.nombre ?? data?.title ?? 'Producto Smart',
           categoria: data?.categoria ?? data?.category ?? 'Smart Home',
-          grupo: data?.grupo ?? (data?.category?.includes?.('Cámara') ? 'Cámaras de Seguridad' : 'Parlantes Inteligentes'),
+          grupo:
+            data?.grupo ??
+            (data?.category?.includes?.('Cámara') ? 'Cámaras de Seguridad' : 'Parlantes Inteligentes'),
           marca: data?.marca ?? data?.brand ?? '—',
           estado: data?.estado ?? 'Nuevo',
           precio: Number(data?.precio ?? data?.price ?? 0),
@@ -107,7 +125,7 @@ export default function DetallesSmart() {
           especificacionesTecnicas: {
             modelo: data?.especificacionesTecnicas?.modelo ?? '—',
             compatibilidad: data?.especificacionesTecnicas?.compatibilidad ?? '—',
-            conectividad: data?.especificacionesTecnicas?.conectividad ?? undefined, // opcional
+            conectividad: data?.especificacionesTecnicas?.conectividad ?? undefined,
             ...data?.especificacionesTecnicas,
           },
           rating: Number(data?.rating ?? 4.6),
@@ -125,6 +143,15 @@ export default function DetallesSmart() {
         const currentCount = getReportCount(safe.id);
         setReportCount(currentCount);
         setIsDisabled(isDisabledByReports(safe.id));
+
+        // --- Estado de wishlist (server o localStorage) ---
+        if (productService.isInWishlist) {
+          const ok = await productService.isInWishlist(safe.id);
+          if (isMounted) setInWishlist(!!ok);
+        } else {
+          const s = wlGetSet();
+          if (isMounted) setInWishlist(s.has(safe.id));
+        }
       } catch (err) {
         if (!isMounted) return;
         setError('No se pudo encontrar el producto solicitado.');
@@ -155,7 +182,45 @@ export default function DetallesSmart() {
     return list;
   }, [product]);
 
-  // ---------- Reportar (igual que en detalleslap/detallescel) ----------
+  // ---------- Wishlist toggle (igual que detalleslap) ----------
+  const toggleWishlist = async () => {
+    if (!product) return;
+    const pid = product.id;
+    setWishLoading(true);
+    setWishMsg('');
+
+    try {
+      if (inWishlist) {
+        if (productService.removeFromWishlist) {
+          await productService.removeFromWishlist(pid);
+        } else {
+          const s = wlGetSet();
+          s.delete(pid);
+          wlSave(s);
+        }
+        setInWishlist(false);
+        setWishMsg('Eliminado de tu wishlist.');
+      } else {
+        if (productService.addToWishlist) {
+          await productService.addToWishlist(pid);
+        } else {
+          const s = wlGetSet();
+          s.add(pid);
+          wlSave(s);
+        }
+        setInWishlist(true);
+        setWishMsg('Agregado a tu wishlist.');
+      }
+      setTimeout(() => setWishMsg(''), 1500);
+    } catch {
+      setWishMsg('No se pudo actualizar la wishlist.');
+      setTimeout(() => setWishMsg(''), 2000);
+    } finally {
+      setWishLoading(false);
+    }
+  };
+
+  // ---------- Reportar ----------
   const REPORT_CATEGORIES = [
     'Información incorrecta',
     'Producto fraudulento',
@@ -218,6 +283,11 @@ export default function DetallesSmart() {
       {reportSuccess && (
         <Alert variant="success" className="mb-3" onClose={() => setReportSuccess('')} dismissible>
           {reportSuccess}
+        </Alert>
+      )}
+      {wishMsg && (
+        <Alert variant="info" className="mb-3" onClose={() => setWishMsg('')} dismissible>
+          {wishMsg}
         </Alert>
       )}
 
@@ -296,7 +366,7 @@ export default function DetallesSmart() {
               <span className="ms-3 text-muted">Reportes: {reportCount}</span>
             </div>
 
-            {/* Acciones (incluye Reportar) */}
+            {/* Acciones */}
             <Row className="g-2 mt-3 align-items-end">
               <Col xs="6" sm="4">
                 <Form.Group>
@@ -323,10 +393,17 @@ export default function DetallesSmart() {
                   <FontAwesomeIcon icon={faCartPlus} className="me-2" />
                   Añadir al carrito
                 </Button>
-                <Button variant="outline-secondary" disabled={isDisabled}>
+
+                <Button
+                  variant={inWishlist ? 'secondary' : 'outline-secondary'}
+                  onClick={toggleWishlist}
+                  disabled={wishLoading || isDisabled}
+                  title={inWishlist ? 'Quitar de wishlist' : 'Agregar a wishlist'}
+                >
                   <FontAwesomeIcon icon={faHeart} className="me-2" />
-                  Wishlist
+                  {inWishlist ? 'En wishlist' : 'Wishlist'}
                 </Button>
+
                 <Button
                   variant="outline-dark"
                   onClick={() => setShowReport(true)}

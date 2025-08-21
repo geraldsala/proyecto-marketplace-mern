@@ -10,11 +10,13 @@ const productRoutes = require('./routes/productRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const testRoutes = require('./routes/testRoutes');
 const userRoutes = require('./routes/userRoutes');
-const subscribeRoutes = require('./routes/subscribeRoutes');
-const categoryRoutes = require('./routes/categoryRoutes'); // <-- 1. IMPORTAR RUTAS DE CATEGORÍAS
+const subscribeRoutes = require('./routes/subscribeRoutes'); // Para el boletín de noticias
+const categoryRoutes = require('./routes/categoryRoutes');
+const storeSubscriptionRoutes = require('./routes/storeSubscriptionRoutes'); // <-- 1. IMPORTAMOS LAS NUEVAS RUTAS
+
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 
-// Cargar variables de entorno del archivo .env
+// Cargar variables de entorno
 dotenv.config();
 
 // Conectar a la base de datos
@@ -32,8 +34,9 @@ app.use('/api/products', productRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/test', testRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/subscribe', subscribeRoutes);
-app.use('/api/categories', categoryRoutes); // <-- 2. USAR LAS RUTAS DE CATEGORÍAS
+app.use('/api/subscribe', subscribeRoutes); // Para el boletín de noticias
+app.use('/api/categories', categoryRoutes);
+app.use('/api/storesubscriptions', storeSubscriptionRoutes); // <-- 2. USAMOS LAS NUEVAS RUTAS
 
 // Ruta de prueba
 app.get('/', (req, res) => {
@@ -45,5 +48,4 @@ app.use(notFound);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-
 app.listen(PORT, () => console.log(`🚀 Servidor corriendo en el puerto ${PORT}`));

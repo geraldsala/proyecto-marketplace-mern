@@ -35,6 +35,16 @@ function isDisabledByReports(productId) {
   return getReportCount(productId) >= 10;
 }
 
+/* --------------------- Helpers de wishlist (fallback) ------------------ */
+const WL_KEY = 'wishlist:ids';
+function wlGetSet() {
+  try { return new Set(JSON.parse(localStorage.getItem(WL_KEY) || '[]')); }
+  catch { return new Set(); }
+}
+function wlSave(set) {
+  localStorage.setItem(WL_KEY, JSON.stringify([...set]));
+}
+
 /** Estrellas (permite calificar si se pasa onRate) */
 function Stars({ value = 0, size = '1rem', onRate }) {
   const arr = [1, 2, 3, 4, 5];
@@ -76,6 +86,11 @@ export default function DetallesCelular() {
   const [reportSuccess, setReportSuccess] = useState('');
   const [reportCount, setReportCount] = useState(0);
   const [isDisabled, setIsDisabled] = useState(false);
+
+  // Wishlist (igual que detalleslap)
+  const [inWishlist, setInWishlist] = useState(false);
+  const [wishMsg, setWishMsg] = useState('');
+  const [wishLoading, setWishLoading] = useState(false);
 
   // ---------- Carga del producto ----------
   useEffect(() => {
@@ -126,6 +141,15 @@ export default function DetallesCelular() {
         const currentCount = getReportCount(safe.id);
         setReportCount(currentCount);
         setIsDisabled(isDisabledByReports(safe.id));
+
+        // --- Estado de wishlist (server o localStorage) ---
+        if (productService.isInWishlist) {
+          const ok = await productService.isInWishlist(safe.id);
+          if (isMounted) setInWishlist(!!ok);
+        } else {
+          const s = wlGetSet();
+          if (isMounted) setInWishlist(s.has(safe.id));
+        }
       } catch (err) {
         if (!isMounted) return;
         setError('No se pudo encontrar el producto solicitado.');
@@ -159,6 +183,44 @@ export default function DetallesCelular() {
     ];
   }, [product]);
 
+  // ---------- Wishlist toggle (igual que detalleslap) ----------
+  const toggleWishlist = async () => {
+    if (!product) return;
+    const pid = product.id;
+    setWishLoading(true);
+    setWishMsg('');
+
+    try {
+      if (inWishlist) {
+        if (productService.removeFromWishlist) {
+          await productService.removeFromWishlist(pid);
+        } else {
+          const s = wlGetSet();
+          s.delete(pid);
+          wlSave(s);
+        }
+        setInWishlist(false);
+        setWishMsg('Eliminado de tu wishlist.');
+      } else {
+        if (productService.addToWishlist) {
+          await productService.addToWishlist(pid);
+        } else {
+          const s = wlGetSet();
+          s.add(pid);
+          wlSave(s);
+        }
+        setInWishlist(true);
+        setWishMsg('Agregado a tu wishlist.');
+      }
+      setTimeout(() => setWishMsg(''), 1500);
+    } catch {
+      setWishMsg('No se pudo actualizar la wishlist.');
+      setTimeout(() => setWishMsg(''), 2000);
+    } finally {
+      setWishLoading(false);
+    }
+  };
+
   // ---------- Reportar (idéntico a detalleslap) ----------
   const REPORT_CATEGORIES = [
     'Información incorrecta',
@@ -181,9 +243,7 @@ export default function DetallesCelular() {
     setReportCat('');
     setReportDetails('');
 
-    if (newCount >= 10) {
-      setIsDisabled(true);
-    }
+    if (newCount >= 10) setIsDisabled(true);
   };
 
   const agregarReseña = () => {
@@ -224,6 +284,11 @@ export default function DetallesCelular() {
       {reportSuccess && (
         <Alert variant="success" className="mb-3" onClose={() => setReportSuccess('')} dismissible>
           {reportSuccess}
+        </Alert>
+      )}
+      {wishMsg && (
+        <Alert variant="info" className="mb-3" onClose={() => setWishMsg('')} dismissible>
+          {wishMsg}
         </Alert>
       )}
 
@@ -302,7 +367,7 @@ export default function DetallesCelular() {
               <span className="ms-3 text-muted">Reportes: {reportCount}</span>
             </div>
 
-            {/* Acciones (incluye Reportar idéntico a detalleslap) */}
+            {/* Acciones */}
             <Row className="g-2 mt-3 align-items-end">
               <Col xs="6" sm="4">
                 <Form.Group>
@@ -331,9 +396,14 @@ export default function DetallesCelular() {
                   Añadir al carrito
                 </Button>
 
-                <Button variant="outline-secondary" disabled={isDisabled}>
+                <Button
+                  variant={inWishlist ? 'secondary' : 'outline-secondary'}
+                  onClick={toggleWishlist}
+                  disabled={wishLoading || isDisabled}
+                  title={inWishlist ? 'Quitar de wishlist' : 'Agregar a wishlist'}
+                >
                   <FontAwesomeIcon icon={faHeart} className="me-2" />
-                  Wishlist
+                  {inWishlist ? 'En wishlist' : 'Wishlist'}
                 </Button>
 
                 <Button

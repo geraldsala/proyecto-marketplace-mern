@@ -17,9 +17,7 @@ function getToken() {
 }
 function authConfig() {
   const token = getToken();
-  return token
-    ? { headers: { Authorization: `Bearer ${token}` } }
-    : {};
+  return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
 }
 
 // ------- fallback localStorage -------
@@ -56,7 +54,8 @@ const createProduct = async () => {
 };
 
 const updateProduct = async (id, productData) => {
-  const config = { ...authConfig(), headers: { ...(authConfig().headers || {}), 'Content-Type': 'application/json' } };
+  const base = authConfig();
+  const config = { ...base, headers: { ...(base.headers || {}), 'Content-Type': 'application/json' } };
   const { data } = await axios.put(`${API_URL}/${id}`, productData, config);
   return data;
 };
@@ -73,7 +72,7 @@ const isInWishlist = async (productId) => {
   try {
     const { data } = await axios.get(`${WL_URL}/has/${productId}`, config);
     return !!data?.inWishlist;
-  } catch (err) {
+  } catch {
     // Fallback local
     const set = wlGetSet();
     return set.has(String(productId));
@@ -86,7 +85,7 @@ const addToWishlist = async (productId) => {
   try {
     await axios.post(`${WL_URL}/${productId}`, {}, config);
     return true;
-  } catch (err) {
+  } catch {
     // Fallback local
     const set = wlGetSet();
     set.add(String(productId));
@@ -101,7 +100,7 @@ const removeFromWishlist = async (productId) => {
   try {
     await axios.delete(`${WL_URL}/${productId}`, config);
     return true;
-  } catch (err) {
+  } catch {
     // Fallback local
     const set = wlGetSet();
     set.delete(String(productId));
@@ -116,7 +115,7 @@ const getWishlist = async () => {
   try {
     const { data } = await axios.get(WL_URL, config);
     return Array.isArray(data) ? data : [];
-  } catch (err) {
+  } catch {
     // Fallback local: tenemos solo IDs, traemos los productos uno a uno
     const set = wlGetSet();
     const ids = [...set];

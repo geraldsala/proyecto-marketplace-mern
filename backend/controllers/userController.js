@@ -1,5 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const User = require('../models/User.js');
+const Product = require('../models/Product.js'); // Importamos el modelo de Producto
 const generateToken = require('../utils/generateToken.js');
 
 // --- AUTH & PROFILE ---
@@ -78,6 +79,37 @@ const deletePaymentMethod = asyncHandler(async (req, res) => {
     else { res.status(404); throw new Error('Usuario no encontrado'); }
 });
 
+// --- WISHLIST ---
+const toggleWishlistProduct = asyncHandler(async (req, res) => {
+  const { productId } = req.body;
+  if (!productId) { res.status(400); throw new Error('Se requiere el ID del producto'); }
+
+  const user = await User.findById(req.user._id);
+  const product = await Product.findById(productId);
+  if (!product) { res.status(404); throw new Error('Producto no encontrado'); }
+
+  const productIndex = user.wishlist.indexOf(productId);
+  if (productIndex > -1) {
+    user.wishlist.splice(productIndex, 1);
+    await user.save();
+    res.json({ message: 'Producto eliminado de la lista de deseos' });
+  } else {
+    user.wishlist.push(productId);
+    await user.save();
+    res.json({ message: 'Producto agregado a la lista de deseos' });
+  }
+});
+
+const getWishlist = asyncHandler(async (req, res) => {
+    const user = await User.findById(req.user._id).populate({
+        path: 'wishlist',
+        select: 'nombre precio imagenes tienda',
+        populate: { path: 'tienda', select: 'nombreTienda' }
+    });
+    if (user) { res.json(user.wishlist); } 
+    else { res.status(404); throw new Error('Usuario no encontrado'); }
+});
+
 // --- ADMIN FUNCTIONS ---
 const getUsers = asyncHandler(async (req, res) => {
     const users = await User.find({}).select('-password');
@@ -100,5 +132,6 @@ module.exports = {
   registerUser, loginUser, getUserProfile, updateUserProfile,
   addShippingAddress, deleteShippingAddress,
   addPaymentMethod, deletePaymentMethod,
-  getUsers, updateUserRole
+  getUsers, updateUserRole,
+  toggleWishlistProduct, getWishlist, // <-- Nuevas funciones exportadas
 };
