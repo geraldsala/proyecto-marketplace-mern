@@ -1,24 +1,16 @@
 import React, { useState, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Form, Button, Row, Col, Alert, Container, Spinner } from 'react-bootstrap';
-import userService from '../services/userService'; // <-- CORRECCIÓN: Importamos el servicio unificado
-import AuthContext from '../context/AuthContext';
+import { AuthContext } from '../context/AuthContext'; // Importamos el contexto
 
 const LoginPage = () => {
-  const [formData, setFormData] = useState({ email: '', password: '' });
-  const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  
   const navigate = useNavigate();
-  const { login: contextLogin } = useContext(AuthContext); // Renombramos para evitar conflictos
-
-  const { email, password } = formData;
-
-  const onChange = (e) => {
-    setFormData((prevState) => ({
-      ...prevState,
-      [e.target.name]: e.target.value,
-    }));
-  };
+  const { login } = useContext(AuthContext); // Obtenemos la función login del contexto
 
   const submitHandler = async (e) => {
     e.preventDefault();
@@ -26,19 +18,20 @@ const LoginPage = () => {
     setError('');
 
     try {
-      const userData = await userService.login({ email, password }); // <-- CORRECCIÓN: Usamos userService
-      contextLogin(userData); // Actualizamos el contexto global
-      navigate('/');
-      window.location.reload();
+      // Llamamos directamente a la función login del contexto.
+      // ¡Ella ya se encarga de la llamada a la API y de guardar los datos!
+      await login(email, password);
+      navigate('/'); // Redirigimos al usuario a la página de inicio
     } catch (err) {
+      // Si el login falla, el contexto lanzará un error que podemos atrapar aquí.
       const message =
         (err.response && err.response.data && err.response.data.message) ||
         err.message ||
         err.toString();
       setError(message);
-    } finally {
-      setLoading(false);
+      setLoading(false); // Detenemos el spinner solo si hay un error
     }
+    // No necesitamos un 'finally' porque la navegación nos saca de la página
   };
 
   return (
@@ -52,10 +45,9 @@ const LoginPage = () => {
               <Form.Label>Correo Electrónico</Form.Label>
               <Form.Control
                 type="email"
-                name="email"
                 placeholder="Ingresa tu email"
                 value={email}
-                onChange={onChange}
+                onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </Form.Group>
@@ -63,10 +55,9 @@ const LoginPage = () => {
               <Form.Label>Contraseña</Form.Label>
               <Form.Control
                 type="password"
-                name="password"
                 placeholder="Ingresa tu contraseña"
                 value={password}
-                onChange={onChange}
+                onChange={(e) => setPassword(e.target.value)}
                 required
               />
             </Form.Group>

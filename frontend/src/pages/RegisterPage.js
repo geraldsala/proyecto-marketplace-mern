@@ -1,20 +1,19 @@
 import React, { useState, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Form, Button, Row, Col, Alert, Container, Spinner } from 'react-bootstrap';
-import userService from '../services/userService'; // <-- CORRECCIÓN: Importamos el servicio unificado
-import AuthContext from '../context/AuthContext';
+import { AuthContext } from '../context/AuthContext'; // Importamos el contexto
 
 const RegisterPage = () => {
   const [formData, setFormData] = useState({
     cedula: '',
-    nombre: '',
+    nombreCompleto: '', // Usamos el nombre de campo del modelo actualizado
     nombreUsuario: '',
     email: '',
     password: '',
     confirmPassword: '',
     tipoUsuario: 'comprador',
     pais: '',
-    direccion: '',
+    direccionPrincipal: '', // Usamos el nombre de campo del modelo actualizado
     telefono: '',
     nombreTienda: '',
   });
@@ -22,9 +21,9 @@ const RegisterPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
-  const { login: contextLogin } = useContext(AuthContext); // Renombramos para evitar conflictos
+  const { register } = useContext(AuthContext); // Obtenemos la función register del contexto
 
-  const { cedula, nombre, nombreUsuario, email, password, confirmPassword, tipoUsuario, pais, direccion, telefono, nombreTienda } = formData;
+  const { cedula, nombreCompleto, nombreUsuario, email, password, confirmPassword, tipoUsuario, pais, direccionPrincipal, telefono, nombreTienda } = formData;
 
   const onChange = (e) => {
     setFormData((prevState) => ({
@@ -43,23 +42,22 @@ const RegisterPage = () => {
     setError('');
 
     try {
+      // Creamos el objeto de usuario con los datos del formulario
       const userData = { ...formData };
       if (tipoUsuario !== 'tienda') {
-        delete userData.nombreTienda;
+        delete userData.nombreTienda; // No enviamos el nombre de la tienda si no es necesario
       }
-
-      const newUser = await userService.register(userData); // <-- CORRECCIÓN: Usamos userService
-      contextLogin(newUser); // Actualizamos el contexto global
-      navigate('/'); 
-      window.location.reload();
+      
+      // Llamamos directamente a la función register del contexto
+      await register(userData);
+      navigate('/'); // Redirigimos al usuario a la página de inicio
     } catch (err) {
       const message =
         (err.response && err.response.data && err.response.data.message) ||
         err.message ||
         err.toString();
       setError(message);
-    } finally {
-      setLoading(false);
+      setLoading(false); // Detenemos el spinner solo si hay un error
     }
   };
 
@@ -83,9 +81,9 @@ const RegisterPage = () => {
                 <Form.Control type="text" name="nombreTienda" placeholder="Ej: Tienda de Tecnología CR" value={nombreTienda} onChange={onChange} required />
               </Form.Group>
             )}
-            <Form.Group className="mb-3" controlId="nombre">
+            <Form.Group className="mb-3" controlId="nombreCompleto">
               <Form.Label>Nombre Completo o Razón Social</Form.Label>
-              <Form.Control type="text" name="nombre" placeholder="Ej: Juan Pérez S.A." value={nombre} onChange={onChange} required />
+              <Form.Control type="text" name="nombreCompleto" placeholder="Ej: Juan Pérez S.A." value={nombreCompleto} onChange={onChange} required />
             </Form.Group>
             <Form.Group className="mb-3" controlId="nombreUsuario">
               <Form.Label>Nombre de Usuario</Form.Label>
@@ -111,9 +109,9 @@ const RegisterPage = () => {
               <Form.Label>País</Form.Label>
               <Form.Control type="text" name="pais" placeholder="Ej: Costa Rica" value={pais} onChange={onChange} required />
             </Form.Group>
-            <Form.Group className="mb-3" controlId="direccion">
+            <Form.Group className="mb-3" controlId="direccionPrincipal">
               <Form.Label>Dirección</Form.Label>
-              <Form.Control type="text" name="direccion" placeholder="Ej: San José, Calle 5, Ave 2" value={direccion} onChange={onChange} required />
+              <Form.Control type="text" name="direccionPrincipal" placeholder="Ej: San José, Calle 5, Ave 2" value={direccionPrincipal} onChange={onChange} required />
             </Form.Group>
             <Form.Group className="mb-3" controlId="telefono">
               <Form.Label>Teléfono</Form.Label>

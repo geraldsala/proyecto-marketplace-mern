@@ -1,4 +1,4 @@
-// backend/models/userModel.js
+// backend/models/User.js
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
@@ -6,7 +6,8 @@ const bcrypt = require('bcryptjs');
 const direccionSchema = new mongoose.Schema({
   pais: { type: String, required: true },
   provincia: { type: String, required: true },
-  direccionExacta: { type: String, required: true }, // O número de casillero
+  // --- CORRECCIÓN: Alineado con el controlador y el frontend ---
+  casillero: { type: String, required: true }, 
   codigoPostal: { type: String },
   observaciones: { type: String },
 });
@@ -14,45 +15,33 @@ const direccionSchema = new mongoose.Schema({
 // --- SUB-ESQUEMA para Formas de Pago ---
 const formaPagoSchema = new mongoose.Schema({
   nombreTitular: { type: String, required: true },
-  numeroTarjeta: { type: String, required: true }, // Considera cifrar este dato
-  cvv: { type: String, required: true },           // ¡Definitivamente cifrar este dato!
-  fechaVencimiento: { type: String, required: true }, // ej: "12/28"
-  saldo: { type: Number, default: 0 },             // Simulación de saldo
+  numeroTarjeta: { type: String, required: true },
+  cvv: { type: String, required: true },
+  // --- CORRECCIÓN: Alineado con el controlador y el frontend ---
+  vencimiento: { type: String, required: true }, 
+  saldo: { type: Number, default: 0 },
 });
 
 // --- ESQUEMA PRINCIPAL de Usuario ---
 const userSchema = mongoose.Schema(
   {
     cedula: { type: String, required: true, unique: true },
-    nombreCompleto: { type: String, required: true },
+    nombre: { type: String, required: true }, // Mantenemos 'nombre' como en tu controlador
     nombreUsuario: { type: String, required: true, unique: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     tipoUsuario: { type: String, required: true, enum: ['comprador', 'tienda', 'admin'] },
     pais: { type: String, required: true },
-    direccionPrincipal: { type: String, required: true },
+    direccion: { type: String, required: true }, // Mantenemos 'direccion' como en tu controlador
     fotoLogo: { type: String, default: 'placeholder.jpg' },
     telefono: { type: String, required: true },
-
-    // Objeto estructurado para Redes Sociales
-    redesSociales: {
-      website: { type: String },
-      facebook: { type: String },
-      instagram: { type: String },
-    },
-
-    // Campo específico para tiendas
+    redesSociales: { type: [String] },
     nombreTienda: {
       type: String,
       required: function () { return this.tipoUsuario === 'tienda'; },
     },
-
-    // Arrays con esquemas definidos
     direccionesEnvio: [direccionSchema],
     formasPago: [formaPagoSchema],
-
-    // ---- NUEVO: Wishlist del usuario ----
-    // Guarda los _id de los productos marcados como favoritos
     wishlist: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Product',
@@ -61,7 +50,6 @@ const userSchema = mongoose.Schema(
   { timestamps: true }
 );
 
-// Hash de contraseña (evita re-hash si no se modificó)
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) {
     return next();

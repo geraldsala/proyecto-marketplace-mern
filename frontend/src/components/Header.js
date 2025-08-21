@@ -9,7 +9,7 @@ import {
   faLaptop, faHeadphones, faMobileAlt, faHome, faSignOutAlt, 
   faUserCog, faHistory, faHeart   // 👈 añadimos faHeart
 } from '@fortawesome/free-solid-svg-icons';
-import AuthContext from '../context/AuthContext';
+import { AuthContext } from '../context/AuthContext';
 import './Header.css';
 
 const Header = () => {

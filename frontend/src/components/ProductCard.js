@@ -4,12 +4,20 @@ import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTruckFast } from '@fortawesome/free-solid-svg-icons';
 
-// Asumimos que la estructura de tu ProductCard es similar a esta.
-// Si es diferente, solo necesitas aplicar el cambio en la línea del precio.
 const ProductCard = ({ product }) => {
-  // Función para determinar la ruta correcta según la categoría
-  const getProductLink = (category) => {
-    switch (category.toLowerCase()) {
+  
+  const getProductLink = (categoryObj) => {
+    
+    
+    if (!categoryObj || !categoryObj.nombre) {
+    
+      return `/product/${product._id}`;
+    }
+
+    const categoryName = categoryObj.nombre;
+
+    
+    switch (categoryName.toLowerCase()) {
       case 'laptops':
         return `/producto/laptop/${product._id}`;
       case 'audio':
@@ -23,8 +31,10 @@ const ProductCard = ({ product }) => {
     }
   };
 
+ 
   return (
     <Card className="my-3 rounded shadow-sm h-100 product-card-hover">
+      {/* La llamada a la función no cambia, pero ahora es segura */}
       <Link to={getProductLink(product.categoria)}>
         <Card.Img src={product.imagenes[0]} variant="top" className="product-card-img" />
       </Link>
@@ -35,9 +45,7 @@ const ProductCard = ({ product }) => {
           </Card.Title>
         </Link>
         
-        {/* --- LÍNEA AÑADIDA --- */}
         <div className="product-brand text-muted mb-2">{product.brand}</div>
-        {/* -------------------- */}
 
         <Card.Text as="div" className="mt-auto">
           <div className="mb-2">
@@ -46,7 +54,8 @@ const ProductCard = ({ product }) => {
           </div>
           
           <h3 className="product-price">
-            ₡{product.precio.toLocaleString('es-CR')}
+            
+            ₡{product.precio ? product.precio.toLocaleString('es-CR') : '0'}
           </h3>
         </Card.Text>
       </Card.Body>

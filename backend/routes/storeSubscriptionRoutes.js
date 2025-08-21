@@ -5,7 +5,7 @@ const {
   getMySubscriptions,
   getMySubscribers,
 } = require('../controllers/storeSubscriptionController.js');
-const { protect, authorize } = require('../middleware/authMiddleware.js');
+const { protect, authorize } = require('../middlewares/authMiddleware.js');
 
 // --- Rutas para Compradores ---
 

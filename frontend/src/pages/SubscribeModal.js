@@ -22,7 +22,7 @@ const SubscribeModal = ({ onClose, onSubscribe }) => {
 
     // Intenta hacer una petición POST al backend con el email
     try {
-      const response = await fetch("http://localhost:5000/subscribe", {
+      const response = await fetch("http://localhost:5000/api/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }), // Se envía el email como JSON

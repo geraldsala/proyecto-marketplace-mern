@@ -6,7 +6,7 @@ import { faLaptop, faHeadphones, faMobileAlt, faHome } from '@fortawesome/free-s
 import productService from '../services/productService';
 import ProductCard from '../components/ProductCard';
 import ProductCardSkeleton from '../components/ProductCardSkeleton';
-import SubscribeModal from "./SubscribeModal";  // 👈 Se importa el modal
+import SubscribeModal from "./SubscribeModal";
 import './HomePage.css';
 
 // --- Imágenes locales ---
@@ -19,16 +19,23 @@ const HomePage = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [showSubscribe, setShowSubscribe] = useState(false); // Estado del modal
+  const [showSubscribe, setShowSubscribe] = useState(false);
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
         const productsFromAPI = await productService.getProducts();
+        
+        // --- LÍNEA DE DEPURACIÓN ---
+        // Esto nos mostrará en la consola del navegador qué está devolviendo la API.
+        console.log("Productos recibidos de la API:", productsFromAPI);
+        
         setProducts(productsFromAPI.slice(0, 8));
       } catch (err) {
         setError('No se pudieron cargar los productos.');
+        // También mostraremos el error exacto en la consola.
+        console.error("Error al cargar productos:", err);
       } finally {
         setLoading(false);
       }
@@ -36,22 +43,21 @@ const HomePage = () => {
     fetchProducts();
   }, []);
 
-  // 👇 Mostrar modal SOLO si el usuario está logueado y NO está suscrito
   useEffect(() => {
-    const userInfo = localStorage.getItem("userInfo"); // viene de authService
+    const userInfo = localStorage.getItem("userInfo");
     const alreadySubscribed = localStorage.getItem("isSubscribed");
 
     if (userInfo && !alreadySubscribed) {
       const timer = setTimeout(() => {
         setShowSubscribe(true);
-      }, 5000); // ⏳ 5 segundos
+      }, 5000);
 
       return () => clearTimeout(timer);
     }
   }, []);
 
   const handleSubscribe = (email) => {
-    localStorage.setItem("isSubscribed", "true"); // Guardar que ya está suscrito
+    localStorage.setItem("isSubscribed", "true");
     setShowSubscribe(false);
   };
 
