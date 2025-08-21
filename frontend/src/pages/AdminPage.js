@@ -1,114 +1,116 @@
-// frontend/src/pages/AdminPage.js
 import React, { useState, useEffect, useContext } from 'react';
-import { Table, Button, Form, Alert } from 'react-bootstrap';
-import axios from 'axios';
+import { Container, Table, Button, Alert, Spinner, Modal, Form } from 'react-bootstrap';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faUsers, faEdit } from '@fortawesome/free-solid-svg-icons';
 import AuthContext from '../context/AuthContext';
-import { Container } from 'react-bootstrap';
+import userService from '../services/userService';
 
 const AdminPage = () => {
-  const [users, setUsers] = useState([]);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
   const { userInfo } = useContext(AuthContext);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  
+  const [showModal, setShowModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [newRole, setNewRole] = useState('');
 
-  useEffect(() => {
-    const fetchUsers = async () => {
+  const loadUsers = async () => {
+    try {
       setLoading(true);
-      if (userInfo && userInfo.tipoUsuario === 'admin') {
-        try {
-          const config = {
-            headers: {
-              Authorization: `Bearer ${userInfo.token}`,
-            },
-          };
-          const { data } = await axios.get('http://localhost:5000/api/users', config);
-          setUsers(data);
-          setError('');
-        } catch (err) {
-          setError('No se pudieron cargar los usuarios. Verifica que eres un administrador.');
-        } finally {
-          setLoading(false);
-        }
-      }
-    };
-    fetchUsers();
-  }, [userInfo]);
-
-  const updateRoleHandler = async (id, newRole, nombreTienda) => {
-    if (window.confirm(`¿Estás seguro de cambiar el rol del usuario ${id} a ${newRole}?`)) {
-      try {
-        const config = {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${userInfo.token}`,
-          },
-        };
-        const body = { tipoUsuario: newRole };
-        if (newRole === 'tienda') {
-            body.nombreTienda = nombreTienda;
-        }
-
-        await axios.put(`http://localhost:5000/api/users/update-role/${id}`, body, config);
-        
-        // Actualizar la lista de usuarios después del cambio
-        const { data } = await axios.get('http://localhost:5000/api/users', config);
-        setUsers(data);
-        setError('');
-
-      } catch (err) {
-        setError('No se pudo actualizar el rol. ' + err.response?.data?.message);
-      }
+      const data = await userService.getUsers(userInfo.token);
+      setUsers(data);
+    } catch (err) {
+      setError('No se pudieron cargar los usuarios. Verifica que eres un administrador.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (!userInfo || userInfo.tipoUsuario !== 'admin') {
-    return (
-      <Container className='mt-5 text-center'>
-        <Alert variant='danger'>Acceso denegado. Solo para administradores.</Alert>
-      </Container>
-    );
+  useEffect(() => {
+    if (userInfo && userInfo.tipoUsuario === 'admin') {
+      loadUsers();
+    } else {
+      setError('Acceso denegado. Esta página es solo para administradores.');
+      setLoading(false);
+    }
+  }, [userInfo]);
+
+  const handleShowModal = (user) => {
+    setSelectedUser(user);
+    setNewRole(user.tipoUsuario);
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setSelectedUser(null);
+  };
+
+  const handleRoleUpdate = async () => {
+    try {
+        await userService.updateUserRole(selectedUser._id, { tipoUsuario: newRole }, userInfo.token);
+        handleCloseModal();
+        loadUsers();
+    } catch (err) {
+        setError('No se pudo actualizar el rol del usuario.');
+    }
+  };
+
+  if (loading) {
+    return <div className="text-center py-5"><Spinner animation="border" /></div>;
   }
 
   return (
-    <Container className='mt-5'>
-      <h1>Panel de Administración</h1>
-      {error && <Alert variant='danger'>{error}</Alert>}
-      {loading ? (
-        <p>Cargando usuarios...</p>
-      ) : (
-        <Table striped bordered hover responsive className='table-sm mt-3'>
+    <Container className="my-4">
+      <div className="d-flex align-items-center mb-4">
+        <FontAwesomeIcon icon={faUsers} size="2x" className="me-3" />
+        <h1>Panel de Administración de Usuarios</h1>
+      </div>
+      {error && <Alert variant="danger">{error}</Alert>}
+      
+      {!error && (
+        <Table striped bordered hover responsive>
           <thead>
-            <tr>
-              <th>ID</th>
-              <th>NOMBRE</th>
-              <th>EMAIL</th>
-              <th>ROL</th>
-              <th>ACCIÓN</th>
-            </tr>
+            <tr><th>ID</th><th>Nombre</th><th>Email</th><th>Rol</th><th>Acciones</th></tr>
           </thead>
           <tbody>
-            {users.map((user) => (
+            {users.map(user => (
               <tr key={user._id}>
                 <td>{user._id}</td>
                 <td>{user.nombre}</td>
                 <td>{user.email}</td>
                 <td>{user.tipoUsuario}</td>
                 <td>
-                  {user.tipoUsuario !== 'admin' && (
-                    <Button
-                      variant='success'
-                      className='btn-sm'
-                      onClick={() => updateRoleHandler(user._id, user.tipoUsuario === 'tienda' ? 'comprador' : 'tienda', 'Nombre de Tienda')}
-                    >
-                      {user.tipoUsuario === 'tienda' ? 'Convertir a Comprador' : 'Convertir a Tienda'}
-                    </Button>
-                  )}
+                  <Button variant="light" size="sm" onClick={() => handleShowModal(user)}>
+                    <FontAwesomeIcon icon={faEdit} /> Editar Rol
+                  </Button>
                 </td>
               </tr>
             ))}
           </tbody>
-        </Table> 
+        </Table>
       )}
+
+      <Modal show={showModal} onHide={handleCloseModal}>
+        <Modal.Header closeButton>
+          <Modal.Title>Editar Rol de {selectedUser?.nombre}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form.Group>
+            <Form.Label>Nuevo Rol</Form.Label>
+            <Form.Select value={newRole} onChange={(e) => setNewRole(e.target.value)}>
+              <option value="comprador">Comprador</option>
+              <option value="tienda">Tienda</option>
+              <option value="admin">Admin</option>
+            </Form.Select>
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleCloseModal}>Cancelar</Button>
+          <Button variant="primary" onClick={handleRoleUpdate}>Guardar Cambios</Button>
+        </Modal.Footer>
+      </Modal>
     </Container>
   );
 };

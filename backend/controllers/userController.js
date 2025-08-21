@@ -2,7 +2,7 @@ const asyncHandler = require('express-async-handler');
 const User = require('../models/User.js');
 const generateToken = require('../utils/generateToken.js');
 
-// --- AUTH FUNCTIONS ---
+// --- AUTH & PROFILE ---
 const registerUser = asyncHandler(async (req, res) => {
   const { cedula, nombre, nombreUsuario, email, password, tipoUsuario, pais, direccion, telefono, nombreTienda } = req.body;
   const userExists = await User.findOne({ $or: [{ email }, { cedula }] });
@@ -27,7 +27,6 @@ const loginUser = asyncHandler(async (req, res) => {
   }
 });
 
-// --- PROFILE FUNCTIONS ---
 const getUserProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
   if (user) {
@@ -50,43 +49,48 @@ const updateUserProfile = asyncHandler(async (req, res) => {
   }
 });
 
-// --- ADDRESS FUNCTIONS ---
+// --- ADDRESS & PAYMENTS ---
 const addShippingAddress = asyncHandler(async (req, res) => {
     const { pais, provincia, casillero, codigoPostal, observaciones } = req.body;
     const newAddress = { pais, provincia, casillero, codigoPostal, observaciones };
     const user = await User.findByIdAndUpdate(req.user._id, { $push: { direccionesEnvio: newAddress } }, { new: true, runValidators: true });
-    if (user) {
-        res.status(201).json(user.direccionesEnvio);
-    } else {
-        res.status(404); throw new Error('Usuario no encontrado');
-    }
+    if (user) { res.status(201).json(user.direccionesEnvio); } 
+    else { res.status(404); throw new Error('Usuario no encontrado'); }
 });
 
 const deleteShippingAddress = asyncHandler(async (req, res) => {
     const user = await User.findByIdAndUpdate(req.user._id, { $pull: { direccionesEnvio: { _id: req.params.addressId } } }, { new: true });
-    if (user) {
-        res.json(user.direccionesEnvio);
-    } else {
-        res.status(404); throw new Error('Usuario no encontrado');
-    }
+    if (user) { res.json(user.direccionesEnvio); } 
+    else { res.status(404); throw new Error('Usuario no encontrado'); }
 });
 
-// --- PAYMENT METHOD FUNCTIONS ---
 const addPaymentMethod = asyncHandler(async (req, res) => {
     const { nombreTitular, numeroTarjeta, cvv, vencimiento } = req.body;
     const newPaymentMethod = { nombreTitular, numeroTarjeta, cvv, vencimiento };
     const user = await User.findByIdAndUpdate(req.user._id, { $push: { formasPago: newPaymentMethod } }, { new: true, runValidators: true });
-    if (user) {
-        res.status(201).json(user.formasPago);
-    } else {
-        res.status(404); throw new Error('Usuario no encontrado');
-    }
+    if (user) { res.status(201).json(user.formasPago); } 
+    else { res.status(404); throw new Error('Usuario no encontrado'); }
 });
 
 const deletePaymentMethod = asyncHandler(async (req, res) => {
     const user = await User.findByIdAndUpdate(req.user._id, { $pull: { formasPago: { _id: req.params.methodId } } }, { new: true });
+    if (user) { res.json(user.formasPago); } 
+    else { res.status(404); throw new Error('Usuario no encontrado'); }
+});
+
+// --- ADMIN FUNCTIONS ---
+const getUsers = asyncHandler(async (req, res) => {
+    const users = await User.find({}).select('-password');
+    res.json(users);
+});
+
+const updateUserRole = asyncHandler(async (req, res) => {
+    const user = await User.findById(req.params.id);
     if (user) {
-        res.json(user.formasPago);
+        user.tipoUsuario = req.body.tipoUsuario || user.tipoUsuario;
+        user.nombreTienda = req.body.nombreTienda || user.nombreTienda;
+        const updatedUser = await user.save();
+        res.json({ _id: updatedUser._id, nombre: updatedUser.nombre, email: updatedUser.email, tipoUsuario: updatedUser.tipoUsuario });
     } else {
         res.status(404); throw new Error('Usuario no encontrado');
     }
@@ -95,5 +99,6 @@ const deletePaymentMethod = asyncHandler(async (req, res) => {
 module.exports = {
   registerUser, loginUser, getUserProfile, updateUserProfile,
   addShippingAddress, deleteShippingAddress,
-  addPaymentMethod, deletePaymentMethod
+  addPaymentMethod, deletePaymentMethod,
+  getUsers, updateUserRole
 };

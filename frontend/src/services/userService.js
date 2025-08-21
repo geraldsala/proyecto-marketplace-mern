@@ -1,3 +1,4 @@
+// frontend/src/services/userService.js
 import axios from 'axios';
 
 const API_URL = 'http://localhost:5000/api/users';
@@ -30,6 +31,12 @@ const getProfile = async (token) => {
   return data;
 };
 
+const updateProfile = async (profileData, token) => {
+    const config = { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } };
+    const { data } = await axios.put(`${API_URL}/profile`, profileData, config);
+    return data;
+}
+
 // --- Funciones de Direcciones ---
 const addShippingAddress = async (addressData, token) => {
   const config = { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } };
@@ -43,7 +50,7 @@ const deleteShippingAddress = async (addressId, token) => {
   return data;
 };
 
-// --- NUEVAS FUNCIONES DE MÉTODOS DE PAGO ---
+// --- Funciones de Métodos de Pago ---
 const addPaymentMethod = async (paymentData, token) => {
     const config = { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } };
     const { data } = await axios.post(`${API_URL}/paymentmethods`, paymentData, config);
@@ -56,16 +63,32 @@ const deletePaymentMethod = async (methodId, token) => {
     return data;
 };
 
+// --- Funciones de Admin ---
+const getUsers = async (token) => {
+    const config = { headers: { Authorization: `Bearer ${token}` } };
+    const { data } = await axios.get(API_URL, config);
+    return data;
+};
 
+const updateUserRole = async (id, roleData, token) => {
+    const config = { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } };
+    const { data } = await axios.put(`${API_URL}/${id}/role`, roleData, config);
+    return data;
+};
+
+// --- Objeto de Servicio Unificado ---
 const userService = {
   register,
   login,
   logout,
   getProfile,
+  updateProfile,
   addShippingAddress,
   deleteShippingAddress,
-  addPaymentMethod,      // <-- Añadido
-  deletePaymentMethod,   // <-- Añadido
+  addPaymentMethod,
+  deletePaymentMethod,
+  getUsers,
+  updateUserRole
 };
 
 export default userService;
