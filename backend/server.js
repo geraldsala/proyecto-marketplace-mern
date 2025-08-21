@@ -10,6 +10,7 @@ const productRoutes = require('./routes/productRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const testRoutes = require('./routes/testRoutes');
 const userRoutes = require('./routes/userRoutes'); // Importado correctamente
+const subscribeRoutes = require('./routes/subscribeRoutes'); // 👈 Prueba...
 const { notFound, errorHandler } = require('./middlewares/errorMiddleware');
 
 // Cargar variables de entorno del archivo .env
@@ -30,6 +31,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/test', testRoutes);
 app.use('/api/users', userRoutes); // Usando la ruta correctamente
+app.use('/api/subscribe', subscribeRoutes); // 👈 prueba...
 
 // Ruta de prueba
 app.get('/', (req, res) => {
