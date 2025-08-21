@@ -9,9 +9,10 @@ const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const testRoutes = require('./routes/testRoutes');
-const userRoutes = require('./routes/userRoutes'); // Importado correctamente
-const subscribeRoutes = require('./routes/subscribeRoutes'); // 👈 Prueba...
-const { notFound, errorHandler } = require('./middlewares/errorMiddleware');
+const userRoutes = require('./routes/userRoutes');
+const subscribeRoutes = require('./routes/subscribeRoutes');
+const categoryRoutes = require('./routes/categoryRoutes'); // <-- 1. IMPORTAR RUTAS DE CATEGORÍAS
+const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 
 // Cargar variables de entorno del archivo .env
 dotenv.config();
@@ -30,8 +31,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/test', testRoutes);
-app.use('/api/users', userRoutes); // Usando la ruta correctamente
-app.use('/api/subscribe', subscribeRoutes); // 👈 prueba...
+app.use('/api/users', userRoutes);
+app.use('/api/subscribe', subscribeRoutes);
+app.use('/api/categories', categoryRoutes); // <-- 2. USAR LAS RUTAS DE CATEGORÍAS
 
 // Ruta de prueba
 app.get('/', (req, res) => {
