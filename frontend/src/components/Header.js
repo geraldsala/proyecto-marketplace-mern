@@ -1,8 +1,9 @@
 // frontend/src/components/Header.js
 
-import React, { useContext } from 'react';
+import React, { useContext, useState } from 'react'; // <-- 1. Añadimos useState
 import { LinkContainer } from 'react-router-bootstrap';
 import { Navbar, Nav, Container, NavDropdown, Form, Button } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom'; // <-- 2. Añadimos useNavigate
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faMicrochip, faShoppingCart, faUser, faStore, faSearch, 
@@ -14,9 +15,23 @@ import './Header.css';
 
 const Header = () => {
   const { userInfo, logout } = useContext(AuthContext);
+  const navigate = useNavigate(); // <-- 3. Inicializamos el hook para navegar
+
+  const [keyword, setKeyword] = useState(''); // <-- 4. Creamos un estado para guardar lo que se escribe en la búsqueda
 
   const logoutHandler = () => {
     logout();
+  };
+
+  // 5. Esta función se ejecuta cuando el usuario presiona Enter o el botón de buscar
+  const submitHandler = (e) => {
+    e.preventDefault();
+    if (keyword.trim()) {
+      navigate(`/search/${keyword}`); // Navega a la página de resultados
+      setKeyword(''); // Limpia la barra de búsqueda
+    } else {
+      navigate('/'); // Si no hay nada escrito, va al inicio
+    }
   };
 
   return (
@@ -42,9 +57,6 @@ const Header = () => {
               {userInfo ? (
                 <NavDropdown title={<FontAwesomeIcon icon={faUser} size="lg" />} id="username-dropdown" align="end">
                   <NavDropdown.Header>Hola, {userInfo.nombre}</NavDropdown.Header>
-                  
-                  {/* --- INICIO DE LA CORRECCIÓN --- */}
-                  {/* Un solo enlace al panel, con texto dinámico */}
                   <LinkContainer to="/panel">
                     <NavDropdown.Item>
                       {userInfo.tipoUsuario === 'tienda' ? (
@@ -54,8 +66,6 @@ const Header = () => {
                       )}
                     </NavDropdown.Item>
                   </LinkContainer>
-                  {/* --- FIN DE LA CORRECCIÓN --- */}
-                  
                   {userInfo.tipoUsuario === 'admin' && (
                      <LinkContainer to='/admin'>
                        <NavDropdown.Item><FontAwesomeIcon icon={faUserCog} className='me-2' /> Panel Admin</NavDropdown.Item>
@@ -77,9 +87,19 @@ const Header = () => {
       </Navbar>
       <div className="search-bar-container py-2">
         <Container>
-            <Form className="d-flex">
-                <Form.Control type="search" placeholder="Buscar productos, marcas y más..." className="me-2 search-input" aria-label="Search" />
-                <Button variant="primary" className="search-button"><FontAwesomeIcon icon={faSearch} /></Button>
+            {/* --- 6. Conectamos el formulario a la lógica --- */}
+            <Form className="d-flex" onSubmit={submitHandler}>
+                <Form.Control 
+                    type="search" 
+                    placeholder="Buscar productos, marcas y más..." 
+                    className="me-2 search-input" 
+                    aria-label="Search"
+                    value={keyword}
+                    onChange={(e) => setKeyword(e.target.value)}
+                />
+                <Button type="submit" variant="primary" className="search-button">
+                    <FontAwesomeIcon icon={faSearch} />
+                </Button>
             </Form>
         </Container>
       </div>

@@ -27,6 +27,7 @@ import DetallesLap from './pages/detalleslap';
 import DetallesAudio from './pages/detallesaudio';
 import DetallesCel from './pages/detallescel'; 
 import DetalleSmart from './pages/detallesmart';
+import SearchPage from './pages/SearchPage';
 
 function App() {
   return (
@@ -66,6 +67,9 @@ function App() {
             <Route path="/wishlist" element={<Wishlist />} />
             <Route path="/soporte" element={<ContactMenu />} />
             <Route path="/terminos" element={<TermsPage />} />
+            
+            {/* Rutas barra búsqueda */}
+            <Route path='/search/:keyword' element={<SearchPage />} />
           </Routes>
         </Container>
       </main>
