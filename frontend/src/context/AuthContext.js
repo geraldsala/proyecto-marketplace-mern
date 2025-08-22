@@ -1,16 +1,22 @@
-import React, { createContext, useState, useEffect } from 'react';
+// frontend/src/context/AuthContext.js
+
+// 1. AÑADIMOS 'useContext' a la línea de importación
+import React, { createContext, useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 
-// 1. Crear el Contexto
 const AuthContext = createContext();
 
-// 2. Crear el Proveedor del Contexto
+// 2. AÑADIMOS Y EXPORTAMOS LA FUNCIÓN 'useAuth'
+//    Esto es lo que solucionará el error de compilación.
+export const useAuth = () => {
+  return useContext(AuthContext);
+};
+
+// De aquí en adelante, su código original se mantiene intacto
 const AuthProvider = ({ children }) => {
-  // Estado para guardar la información del usuario
   const [userInfo, setUserInfo] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Efecto para cargar la información del usuario desde localStorage al iniciar la app
   useEffect(() => {
     const storedUserInfo = localStorage.getItem('userInfo');
     if (storedUserInfo) {
@@ -19,7 +25,6 @@ const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  // Función para manejar el login
   const login = async (email, password) => {
     try {
       const config = {
@@ -28,20 +33,18 @@ const AuthProvider = ({ children }) => {
         },
       };
       const { data } = await axios.post(
-        '/api/auth/login', // Llama a tu endpoint de login del backend
+        '/api/auth/login',
         { email, password },
         config
       );
       setUserInfo(data);
       localStorage.setItem('userInfo', JSON.stringify(data));
     } catch (error) {
-      // Manejar el error (ej: mostrar un mensaje al usuario)
       console.error('Error en el login:', error.response.data.message);
       throw error;
     }
   };
 
-  // Función para manejar el registro
   const register = async (userData) => {
     try {
         const config = {
@@ -56,13 +59,11 @@ const AuthProvider = ({ children }) => {
     }
   };
 
-  // Función para manejar el logout
   const logout = () => {
     setUserInfo(null);
     localStorage.removeItem('userInfo');
   };
 
-  // 3. Proveer el estado y las funciones a los componentes hijos
   return (
     <AuthContext.Provider value={{ userInfo, loading, login, register, logout }}>
       {children}

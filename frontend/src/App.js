@@ -9,25 +9,21 @@ import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import AdminPage from './pages/AdminPage';
-import ProductPage from './pages/ProductPage';
-import ProfilePage from './pages/ProfilePage'; // Este es nuestro panel unificado
-import PurchaseHistoryPage from './pages/PurchaseHistoryPage';
+import ProductPage from './pages/ProductPage'; // El único componente para detalles
+import ProfilePage from './pages/ProfilePage';
 import Wishlist from './pages/wishlist';
 import ProductEditPage from './pages/ProductEditPage';
-
-// Componentes de categorías y detalles
 import ContactMenu from './pages/ContactMenu';
+import ScrollToTopButton from './pages/ScrollToTopButton';
+import TermsPage from './pages/TermsPage';
+import SearchPage from './pages/SearchPage';
+import CartPage from './pages/CartPage'; // Necesitamos una página para el carrito
+
+// Importando sus páginas de categoría
 import Laptop from './pages/laptop';
 import Audio from './pages/audio';
 import Celulares from './pages/celulares';
-import ScrollToTopButton from './pages/ScrollToTopButton';
-import TermsPage from './pages/TermsPage';
 import Smart from './pages/smart';
-import DetallesLap from './pages/detalleslap';
-import DetallesAudio from './pages/detallesaudio';
-import DetallesCel from './pages/detallescel'; 
-import DetalleSmart from './pages/detallesmart';
-import SearchPage from './pages/SearchPage';
 
 function App() {
   return (
@@ -36,40 +32,28 @@ function App() {
       <main className='py-3'>
         <Container>
           <Routes>
-            {/* Rutas Principales */}
-            <Route path='/' element={<HomePage />} exact />
-            <Route path='/login' element={<LoginPage />} />
-            <Route path='/register' element={<RegisterPage />} />
+            {/* --- RUTA DE DETALLE DE PRODUCTO UNIFICADA --- */}
+            {/* Esta única ruta es la que arregla la página en blanco */}
+            <Route path="/producto/:id" element={<ProductPage />} />
             
-            {/* --- INICIO DE LA CORRECCIÓN --- */}
-            {/* Ruta unificada para el panel de usuario (comprador o tienda) */}
-            <Route path='/panel' element={<ProfilePage />} />
-            {/* Ruta para editar productos (solo tiendas) */}
-            <Route path="/tienda/producto/:id/edit" element={<ProductEditPage />} />
-            {/* --- FIN DE LA CORRECCIÓN --- */}
-
             {/* Rutas de Categorías */}
             <Route path="/laptops" element={<Laptop />} />
             <Route path="/audio" element={<Audio />} />
             <Route path="/celulares" element={<Celulares />} />
             <Route path="/smarthome" element={<Smart />} />
-            
-            {/* Rutas de Detalles de Productos */}
-            <Route path="/producto/laptop/:id" element={<DetallesLap />} />
-            <Route path="/producto/audio/:id" element={<DetallesAudio />} />
-            <Route path="/producto/celular/:id" element={<DetallesCel />} />
-            <Route path="/producto/smart/:id" element={<DetalleSmart />} />
-            
-            {/* Rutas Adicionales */}
+
+            {/* Rutas Principales */}
+            <Route path='/' element={<HomePage />} exact />
+            <Route path='/login' element={<LoginPage />} />
+            <Route path='/register' element={<RegisterPage />} />
+            <Route path='/panel' element={<ProfilePage />} />
+            <Route path="/tienda/producto/:id/edit" element={<ProductEditPage />} />
             <Route path='/admin' element={<AdminPage />} />
-            <Route path='/product/:id' element={<ProductPage />} />
-            <Route path='/purchase-history' element={<PurchaseHistoryPage />} />
             <Route path="/wishlist" element={<Wishlist />} />
             <Route path="/soporte" element={<ContactMenu />} />
             <Route path="/terminos" element={<TermsPage />} />
-            
-            {/* Rutas barra búsqueda */}
             <Route path='/search/:keyword' element={<SearchPage />} />
+            <Route path='/cart' element={<CartPage />} />
           </Routes>
         </Container>
       </main>

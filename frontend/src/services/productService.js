@@ -1,95 +1,109 @@
+// frontend/src/services/productService.js
 import axios from 'axios';
 
-const API_URL = '/api/products'; // Usamos rutas relativas para que el proxy funcione
-const WL_URL  = '/api/users/wishlist'; // Apuntamos a la ruta de wishlist correcta
+const API_URL = '/api/products';       // URL base para productos
+const WL_URL  = '/api/users/wishlist'; // URL base para wishlist
 
-// ------- helpers auth -------
+// ------- Helpers de Autenticación (sin cambios) -------
 function getToken() {
-  try {
-    const raw = localStorage.getItem('userInfo');
-    if (!raw) return '';
-    const { token } = JSON.parse(raw) || {};
-    return token || '';
-  } catch {
-    return '';
-  }
+  try {
+    const raw = localStorage.getItem('userInfo');
+    if (!raw) return '';
+    const { token } = JSON.parse(raw) || {};
+    return token || '';
+  } catch {
+    return '';
+  }
 }
+
 function authConfig() {
-  const token = getToken();
-  return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+  const token = getToken();
+  return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
 }
 
 // ================== Productos ==================
-const getProducts = async (keyword = '') => {
-  const { data } = await axios.get(`${API_URL}?keyword=${encodeURIComponent(keyword)}`);
-  return data;
-};
 
-// --- FUNCIÓN AÑADIDA ---
-// Pide al backend solo los productos de una categoría específica
-const getProductsByCategory = async (categoryName) => {
-  const { data } = await axios.get(`${API_URL}?category=${encodeURIComponent(categoryName)}`);
+/**
+ * ✨ NUEVA FUNCIÓN UNIFICADA ✨
+ * Obtiene productos desde la API, con filtros opcionales.
+ * @param {object} options - Un objeto con los filtros.
+ * @param {string} [options.keyword] - Palabra clave para buscar.
+ * @param {string} [options.category] - Categoría para filtrar.
+ * @returns {Promise<object>} - El objeto de respuesta de la API (ej. { products, page, pages }).
+ */
+const getProducts = async (options = {}) => {
+  // URLSearchParams maneja de forma segura y automática la creación de URLs con parámetros
+  const params = new URLSearchParams();
+
+  if (options.keyword) {
+    params.append('keyword', options.keyword);
+  }
+  if (options.category) {
+    params.append('category', options.category);
+  }
+  
+  // Hacemos la petición GET con los parámetros construidos
+  const { data } = await axios.get(`${API_URL}?${params.toString()}`);
+  
+  // Devolvemos el objeto completo de la API { products, page, pages }
   return data;
 };
 
 const getProductById = async (id) => {
-  const { data } = await axios.get(`${API_URL}/${id}`);
-  return data;
+  const { data } = await axios.get(`${API_URL}/${id}`);
+  return data;
 };
 
 const getMyProducts = async () => {
-  const config = authConfig();
-  const { data } = await axios.get(`${API_URL}/myproducts`, config);
-  return data;
+  const config = authConfig();
+  const { data } = await axios.get(`${API_URL}/myproducts`, config);
+  return Array.isArray(data) ? data : [];
 };
 
 const createProduct = async () => {
-  const config = authConfig();
-  const { data } = await axios.post(API_URL, {}, config);
-  return data;
+  const config = authConfig();
+  const { data } = await axios.post(API_URL, {}, config);
+  return data;
 };
 
 const updateProduct = async (id, productData) => {
-  const base = authConfig();
-  const config = { ...base, headers: { ...(base.headers || {}), 'Content-Type': 'application/json' } };
-  const { data } = await axios.put(`${API_URL}/${id}`, productData, config);
-  return data;
+  const base = authConfig();
+  const config = { ...base, headers: { ...(base.headers || {}), 'Content-Type': 'application/json' } };
+  const { data } = await axios.put(`${API_URL}/${id}`, productData, config);
+  return data;
 };
 
 const deleteProduct = async (id) => {
-  const config = authConfig();
-  await axios.delete(`${API_URL}/${id}`, config);
+  const config = authConfig();
+  await axios.delete(`${API_URL}/${id}`, config);
 };
 
-// ================== Wishlist ==================
-// (Tu lógica de wishlist se mantiene, pero apuntando a la ruta correcta)
-
-// Añade o quita un producto de la wishlist
+// ================== Wishlist (sin cambios) ==================
 const toggleWishlist = async (productId) => {
-    const config = authConfig();
-    const { data } = await axios.post(WL_URL, { productId }, config);
-    return data;
+  const config = authConfig();
+  const { data } = await axios.post(WL_URL, { productId }, config);
+  return data;
 };
 
-// Devuelve la lista de productos en wishlist
 const getWishlist = async () => {
-  const config = authConfig();
-  const { data } = await axios.get(WL_URL, config);
-  return Array.isArray(data) ? data : [];
+  const config = authConfig();
+  const { data } = await axios.get(WL_URL, config);
+  return Array.isArray(data) ? data : [];
 };
 
+
+// ================== Objeto Exportado ==================
 const productService = {
-  // productos
-  getProducts,
-  getProductsByCategory, // <-- Exportamos la nueva función
-  getProductById,
-  getMyProducts,
-  createProduct,
-  updateProduct,
-  deleteProduct,
-  // wishlist
+  // Productos
+  getProducts, // 🚀 Usamos la nueva función unificada
+  getProductById,
+  getMyProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  // Wishlist
   toggleWishlist,
-  getWishlist,
+  getWishlist,
 };
 
 export default productService;

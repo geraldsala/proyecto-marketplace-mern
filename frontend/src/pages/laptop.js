@@ -13,6 +13,7 @@ const LaptopPage = () => {
   const [allProducts, setAllProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  
   const [search, setSearch] = useState('');
   const [priceMax, setPriceMax] = useState(600000);
   const [brandChecks, setBrandChecks] = useState({});
@@ -25,40 +26,24 @@ const LaptopPage = () => {
   const maxPrice = 600000;
 
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchLaptopProducts = async () => {
+      // 1. La Carga se activa ANTES de llamar a la API.
+      setLoading(true);
       try {
-        setLoading(true);
-        const productsFromAPI = await productService.getProducts();
-
-        // --- SOLUCIÓN DEFINITIVA ---
-        // Este filtro ahora maneja tanto los datos antiguos como los nuevos.
-        const laptopProducts = productsFromAPI.filter((p) => {
-          if (!p.categoria) {
-            return false; // Descarta productos sin categoría.
-          }
-          // Caso 1: La categoría es un objeto (formato nuevo, poblado por la API).
-          if (typeof p.categoria === 'object' && p.categoria !== null) {
-            return p.categoria.nombre?.toLowerCase().trim() === 'laptops';
-          }
-          // Caso 2: La categoría es un texto (formato antiguo en tu base de datos).
-          if (typeof p.categoria === 'string') {
-            return p.categoria.toLowerCase().trim() === 'laptops';
-          }
-          return false;
-        });
-        
-        setAllProducts(laptopProducts);
+        const response = await productService.getProducts({ category: 'Portátiles' });
+        setAllProducts(response.products || []);
       } catch (err) {
-        setError('No se pudieron cargar los productos.');
-        console.error("Error al cargar productos:", err);
+        setError('No se pudieron cargar los productos. Intenta de nuevo más tarde.');
+        console.error("Error al cargar laptops:", err);
       } finally {
+        // 2. La Carga se desactiva SIEMPRE al final,
+        // tanto si hubo éxito como si hubo un error.
         setLoading(false);
       }
     };
-    fetchProducts();
+    fetchLaptopProducts();
   }, []);
 
-  // El resto de tu código para filtros y renderizado se mantiene igual.
   const getBrandFromProductName = (productName) => {
     const lowerCaseName = (productName || '').toLowerCase();
     for (const brand of BRANDS) {
@@ -69,32 +54,33 @@ const LaptopPage = () => {
 
   const filtered = useMemo(() => {
     let data = [...allProducts].filter((p) => !p.inhabilitado);
+
     if (search.trim()) {
       const q = search.toLowerCase();
       data = data.filter((p) =>
         (p.nombre + ' ' + (p.especificacionesTecnicas?.modelo || '')).toLowerCase().includes(q)
       );
     }
+
     data = data.filter((p) => p.precio <= priceMax);
-    const activeBrands = Object.entries(brandChecks)
-      .filter(([, v]) => v)
-      .map(([k]) => k);
+
+    const activeBrands = Object.entries(brandChecks).filter(([, v]) => v).map(([k]) => k);
     if (activeBrands.length) {
       data = data.filter((p) => activeBrands.includes(getBrandFromProductName(p.nombre)));
     }
-    const activeProcs = Object.entries(procChecks)
-      .filter(([, v]) => v)
-      .map(([k]) => k);
+
+    const activeProcs = Object.entries(procChecks).filter(([, v]) => v).map(([k]) => k);
     if (activeProcs.length) {
-      const procQuery = activeProcs.join(' ').toLowerCase();
-      data = data.filter((p) => (p.nombre || '').toLowerCase().includes(procQuery));
+      data = data.filter(p => activeProcs.some(proc => (p.nombre || '').toLowerCase().includes(proc.toLowerCase())));
     }
+
     if (sortBy === 'price-asc') data.sort((a, b) => a.precio - b.precio);
     if (sortBy === 'price-desc') data.sort((a, b) => b.precio - a.precio);
     if (sortBy === 'brand')
       data.sort((a, b) =>
         getBrandFromProductName(a.nombre).localeCompare(getBrandFromProductName(b.nombre))
       );
+      
     return data;
   }, [search, priceMax, brandChecks, procChecks, sortBy, allProducts]);
 
@@ -104,170 +90,112 @@ const LaptopPage = () => {
   return (
     <div className="laptops-page">
       <Container fluid className="pt-3">
-        {/* Barra superior */}
+        {/* ... El resto de su código JSX no cambia ... */}
         <Row className="align-items-center g-3 px-2">
-          <Col xs="12" className="breadcrumbs">
-            <small>
-              <span className="crumb">Inicio</span> / <span className="crumb">Tecnología</span> /{' '}
-              <strong>Portátiles</strong>
-            </small>
-          </Col>
-          <Col md="3" className="d-flex align-items-center gap-2">
-            <FontAwesomeIcon icon={faFilter} />
-            <h5 className="m-0">Filtrar por:</h5>
-          </Col>
-          <Col md="3" className="text-md-start text-muted">
-            <small>
-              Mostrando <strong>1–{Math.min(perPage, filtered.length)}</strong> de{' '}
-              <strong>{filtered.length}</strong> resultados
-            </small>
-          </Col>
-          <Col md="3" className="d-flex justify-content-md-end">
-            <Form.Select
-              size="sm"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="w-auto"
-            >
-              <option value="relevance">Ordenar por…</option>
-              <option value="price-asc">Precio: menor a mayor</option>
-              <option value="price-desc">Precio: mayor a menor</option>
-              <option value="brand">Marca (A-Z)</option>
-            </Form.Select>
-          </Col>
-          <Col md="3" className="d-flex justify-content-md-end align-items-center gap-2">
-            <small className="text-muted">Mostrar:</small>
-            <Form.Select
-              size="sm"
-              value={perPage}
-              onChange={(e) => setPerPage(Number(e.target.value))}
-              className="w-auto"
-            >
-              <option value={12}>12</option>
-              <option value={24}>24</option>
-              <option value={48}>48</option>
-            </Form.Select>
-            <Button
-              variant={gridMode === 'grid' ? 'dark' : 'outline-dark'}
-              size="sm"
-              onClick={() => setGridMode('grid')}
-            >
-              <FontAwesomeIcon icon={faThLarge} />
-            </Button>
-            <Button
-              variant={gridMode === 'list' ? 'dark' : 'outline-dark'}
-              size="sm"
-              onClick={() => setGridMode('list')}
-            >
-              <FontAwesomeIcon icon={faBars} />
-            </Button>
-          </Col>
-        </Row>
-        {/* Contenido */}
-        <Row className="mt-3 gx-4">
-          {/* Filtros */}
-          <Col lg="3" className="mb-4">
-            <aside className="filters card border-0 shadow-sm p-3">
-              <h6 className="mb-3">MARCAS</h6>
-              {BRANDS.map((b) => (
-                <Form.Check
-                  key={b}
-                  type="checkbox"
-                  label={b}
-                  checked={!!brandChecks[b]}
-                  onChange={() => toggleBrand(b)}
-                  className="mb-1"
-                />
-              ))}
-              <hr />
-              <h6 className="mb-2">PRECIO</h6>
-              <input
-                type="range"
-                min={minPrice}
-                max={maxPrice}
-                step="5000"
-                value={priceMax}
-                onChange={(e) => setPriceMax(Number(e.target.value))}
-                className="w-100"
-              />
-              <div className="d-flex justify-content-between mt-1">
-                <small>₡{minPrice.toLocaleString('es-CR')}</small>
-                <small>₡{maxPrice.toLocaleString('es-CR')}</small>
-              </div>
-              <div className="d-flex gap-2 mt-2">
-                <Form.Control
-                  size="sm"
-                  type="text"
-                  placeholder="Buscar…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-                <Button size="sm" variant="dark">
-                  FILTRAR
+            <Col xs="12" className="breadcrumbs">
+                <small>
+                    <span className="crumb">Inicio</span> / <span className="crumb">Tecnología</span> /{' '}
+                    <strong>Portátiles</strong>
+                </small>
+            </Col>
+            <Col md="3" className="d-flex align-items-center gap-2">
+                <FontAwesomeIcon icon={faFilter} />
+                <h5 className="m-0">Filtrar por:</h5>
+            </Col>
+            <Col md="3" className="text-md-start text-muted">
+                <small>
+                    Mostrando <strong>1–{Math.min(perPage, filtered.length)}</strong> de{' '}
+                    <strong>{filtered.length}</strong> resultados
+                </small>
+            </Col>
+            <Col md="3" className="d-flex justify-content-md-end">
+                <Form.Select size="sm" value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="w-auto">
+                    <option value="relevance">Ordenar por…</option>
+                    <option value="price-asc">Precio: menor a mayor</option>
+                    <option value="price-desc">Precio: mayor a menor</option>
+                    <option value="brand">Marca (A-Z)</option>
+                </Form.Select>
+            </Col>
+            <Col md="3" className="d-flex justify-content-md-end align-items-center gap-2">
+                <small className="text-muted">Mostrar:</small>
+                <Form.Select size="sm" value={perPage} onChange={(e) => setPerPage(Number(e.target.value))} className="w-auto">
+                    <option value={12}>12</option>
+                    <option value={24}>24</option>
+                    <option value={48}>48</option>
+                </Form.Select>
+                <Button variant={gridMode === 'grid' ? 'dark' : 'outline-dark'} size="sm" onClick={() => setGridMode('grid')}>
+                    <FontAwesomeIcon icon={faThLarge} />
                 </Button>
-              </div>
-              <hr />
-              <h6 className="mb-2">PROCESADOR</h6>
-              <div className="checklist">
-                {PROCESSORS.map((p) => (
-                  <Form.Check
-                    key={p}
-                    type="checkbox"
-                    label={p}
-                    checked={!!procChecks[p]}
-                    onChange={() => toggleProc(p)}
-                    className="mb-1"
-                  />
-                ))}
-              </div>
-            </aside>
-          </Col>
-          {/* Listado */}
-          <Col lg="9">
-            {loading ? (
-                <div className="text-center py-5"><Spinner animation="border" /></div>
-            ) : error ? (
-                <Alert variant="danger">{error}</Alert>
-            ) : filtered.length === 0 ? (
-                <Alert variant="info">
-                    No se encontraron productos que coincidan con tus filtros.
-                </Alert>
-            ) : (
-              <div className={gridMode === 'grid' ? 'grid-products' : 'list-products'}>
-                {filtered.slice(0, perPage).map((product) => (
-                  <article key={product._id} className="product-card">
-                    <div className="thumb">
-                      {product.stock === 0 && <span className="badge-out">SIN STOCK</span>}
-                      <img src={product.imagenes?.[0]} alt={product.nombre} />
+                <Button variant={gridMode === 'list' ? 'dark' : 'outline-dark'} size="sm" onClick={() => setGridMode('list')}>
+                    <FontAwesomeIcon icon={faBars} />
+                </Button>
+            </Col>
+        </Row>
+        <Row className="mt-3 gx-4">
+            <Col lg="3" className="mb-4">
+                <aside className="filters card border-0 shadow-sm p-3">
+                    <h6 className="mb-3">MARCAS</h6>
+                    {BRANDS.map((b) => (
+                        <Form.Check key={b} type="checkbox" label={b} checked={!!brandChecks[b]} onChange={() => toggleBrand(b)} className="mb-1" />
+                    ))}
+                    <hr />
+                    <h6 className="mb-2">PRECIO</h6>
+                    <input type="range" min={minPrice} max={maxPrice} step="5000" value={priceMax} onChange={(e) => setPriceMax(Number(e.target.value))} className="w-100" />
+                    <div className="d-flex justify-content-between mt-1">
+                        <small>₡{minPrice.toLocaleString('es-CR')}</small>
+                        <small>₡{maxPrice.toLocaleString('es-CR')}</small>
                     </div>
-                    <div className="p-body">
-                      <div className="badges">
-                        <span className="badge-ship">
-                          <FontAwesomeIcon icon={faTruckFast} className="me-1" />
-                          {product.tiempoEnvio || 'Envío Rápido'}
-                        </span>
-                      </div>
-                      <h6 className="title">{product.nombre}</h6>
-                      <div className="meta">
-                        <span className="brand">{getBrandFromProductName(product.nombre)}</span>
-                      </div>
-                      <div className="price">₡{product.precio.toLocaleString('es-CR')}</div>
-                      <div className="actions">
-                        <LinkContainer to={`/producto/laptop/${product._id}`}>
-                          <Button size="sm" variant="dark">
-                            Ver detalle
-                          </Button>
-                        </LinkContainer>
-                        <Button size="sm" variant="outline-dark">
-                          Agregar
-                        </Button>
-                      </div>
+                    <div className="d-flex gap-2 mt-2">
+                        <Form.Control size="sm" type="text" placeholder="Buscar…" value={search} onChange={(e) => setSearch(e.target.value)} />
                     </div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </Col>
+                    <hr />
+                    <h6 className="mb-2">PROCESADOR</h6>
+                    <div className="checklist">
+                        {PROCESSORS.map((p) => (
+                            <Form.Check key={p} type="checkbox" label={p} checked={!!procChecks[p]} onChange={() => toggleProc(p)} className="mb-1" />
+                        ))}
+                    </div>
+                </aside>
+            </Col>
+            <Col lg="9">
+                {loading ? (
+                    <div className="text-center py-5"><Spinner animation="border" /></div>
+                ) : error ? (
+                    <Alert variant="danger">{error}</Alert>
+                ) : filtered.length === 0 ? (
+                    <Alert variant="info">No se encontraron productos que coincidan con tus filtros.</Alert>
+                ) : (
+                    <div className={gridMode === 'grid' ? 'grid-products' : 'list-products'}>
+                        {filtered.slice(0, perPage).map((product) => (
+                            <article key={product._id} className="product-card">
+                                <div className="thumb">
+                                    {product.stock === 0 && <span className="badge-out">SIN STOCK</span>}
+                                    <img src={product.imagenes?.[0]} alt={product.nombre} />
+                                </div>
+                                <div className="p-body">
+                                    <div className="badges">
+                                        <span className="badge-ship">
+                                            <FontAwesomeIcon icon={faTruckFast} className="me-1" />
+                                            {product.tiempoEnvio || 'Envío Rápido'}
+                                        </span>
+                                    </div>
+                                    <h6 className="title">{product.nombre}</h6>
+                                    <div className="meta">
+                                        <span className="brand">{getBrandFromProductName(product.nombre)}</span>
+                                    </div>
+                                    <div className="price">₡{product.precio.toLocaleString('es-CR')}</div>
+                                    <div className="actions">
+                                        <LinkContainer to={`/producto/${product._id}`}>
+                                            <Button size="sm" variant="dark">Ver detalle</Button>
+                                        </LinkContainer>
+                                        <Button size="sm" variant="outline-dark">Agregar</Button>
+                                    </div>
+                                </div>
+                            </article>
+                        ))}
+                    </div>
+                )}
+            </Col>
         </Row>
       </Container>
     </div>

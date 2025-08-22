@@ -2,33 +2,62 @@ const asyncHandler = require('express-async-handler');
 const Product = require('../models/Product.js');
 const Category = require('../models/categoryModel.js');
 
-// ... (todas tus funciones existentes como getProducts, getProductById, etc. se mantienen aquí)
-
-// @desc    Obtener todos los productos (con filtros opcionales)
+// @desc    Obtener todos los productos (con filtros opcionales y diagnóstico)
 // @route   GET /api/products
 // @access  Public
 const getProducts = asyncHandler(async (req, res) => {
-  const { keyword, category } = req.query;
-  const query = {};
+  console.log("\n--- INICIANDO PETICIÓN A /api/products ---");
 
-  if (keyword) {
-    query.nombre = { $regex: keyword, $options: 'i' };
+  const pageSize = 12;
+  const page = Number(req.query.pageNumber) || 1;
+  const queryFilter = {};
+
+  if (req.query.keyword) {
+    queryFilter.name = {
+      $regex: req.query.keyword,
+      $options: "i",
+    };
+    console.log(`[FILTRO] Palabra clave recibida: "${req.query.keyword}"`);
   }
 
-  if (category) {
-    const categoryFound = await Category.findOne({ nombre: { $regex: category, $options: 'i' } });
-    if (categoryFound) {
-      query.categoria = categoryFound._id;
+  if (req.query.category) {
+    const categoryName = req.query.category;
+    console.log(`[FILTRO] Categoría solicitada: "${categoryName}"`);
+
+    console.log(`   -> Buscando en la colección 'categories' un documento con nombre: "${categoryName}"`);
+    const categoryDoc = await Category.findOne({
+      nombre: {
+        $regex: `^${categoryName}$`,
+        $options: "i",
+      },
+    });
+
+    // ESTE ES EL LOG MÁS IMPORTANTE
+    console.log("   -> Resultado de la búsqueda de categoría:", categoryDoc);
+
+    if (categoryDoc) {
+      console.log(`   -> ÉXITO: Categoría encontrada. ID: ${categoryDoc._id}`);
+      queryFilter.categoria = categoryDoc._id; // Campo 'categoria' del modelo Product
     } else {
-      return res.json([]);
+      console.log("   -> FALLO: No se encontró ningún documento para esa categoría.");
+      console.log("--- PETICIÓN FINALIZADA (Sin resultados) ---\n");
+      return res.json({ products: [], page: 1, pages: 0 });
     }
   }
 
-  const products = await Product.find(query)
-    .populate('tienda', 'nombreTienda fotoLogo')
-    .populate('categoria', 'nombre');
+  console.log("[CONSULTA FINAL] Buscando productos con este filtro:", JSON.stringify(queryFilter));
+  const count = await Product.countDocuments(queryFilter);
+  console.log(`[RESULTADO] Se encontraron ${count} productos en total.`);
+  
+  const products = await Product.find(queryFilter)
+    .populate('categoria', 'nombre')
+    .limit(pageSize)
+    .skip(pageSize * (page - 1));
 
-  res.json(products);
+  console.log(`   -> Devolviendo ${products.length} productos para la página actual.`);
+  console.log("--- PETICIÓN FINALIZADA ---\n");
+
+  res.json({ products, page, pages: Math.ceil(count / pageSize) });
 });
 
 // @desc    Obtener un solo producto por ID
@@ -116,8 +145,6 @@ const getMyProducts = asyncHandler(async (req, res) => {
   res.json(products);
 });
 
-
-// --- NUEVA FUNCIÓN ---
 // @desc    Crear una nueva calificación/comentario para un producto
 // @route   POST /api/products/:id/reviews
 // @access  Private/Comprador
@@ -127,7 +154,6 @@ const createProductReview = asyncHandler(async (req, res) => {
   const product = await Product.findById(req.params.id);
 
   if (product) {
-    // Verificamos si el usuario ya ha calificado este producto
     const alreadyReviewed = product.calificaciones.find(
       (r) => r.usuario.toString() === req.user._id.toString()
     );
@@ -158,7 +184,6 @@ const createProductReview = asyncHandler(async (req, res) => {
   }
 });
 
-
 module.exports = {
   getProducts,
   getProductById,
@@ -166,5 +191,5 @@ module.exports = {
   updateProduct,
   deleteProduct,
   getMyProducts,
-  createProductReview, // <-- Exportamos la nueva función
+  createProductReview,
 };
