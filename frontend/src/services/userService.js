@@ -5,7 +5,7 @@ import api from './api';
 const API_URL = '/api/users';
 const STORES_API = '/api/stores';
 
-// =============== Autenticación ===============
+/* ==================== Autenticación ==================== */
 const register = async (userData) => {
   const { data } = await api.post(`${API_URL}/register`, userData);
   if (data) localStorage.setItem('userInfo', JSON.stringify(data));
@@ -22,7 +22,7 @@ const logout = () => {
   localStorage.removeItem('userInfo');
 };
 
-// =============== Perfil ===============
+/* ==================== Perfil ==================== */
 const getProfile = async () => {
   const { data } = await api.get(`${API_URL}/profile`);
   return data;
@@ -36,7 +36,7 @@ const updateProfile = async (profileData) => {
   return updatedUserInfo;
 };
 
-// =============== Direcciones ===============
+/* ==================== Direcciones ==================== */
 const addShippingAddress = async (addressData) => {
   const { data } = await api.post(`${API_URL}/addresses`, addressData);
   return data;
@@ -47,7 +47,7 @@ const deleteShippingAddress = async (addressId) => {
   return data;
 };
 
-// =============== Métodos de pago ===============
+/* ==================== Métodos de pago ==================== */
 const addPaymentMethod = async (paymentData) => {
   const { data } = await api.post(`${API_URL}/paymentmethods`, paymentData);
   return data;
@@ -58,7 +58,7 @@ const deletePaymentMethod = async (methodId) => {
   return data;
 };
 
-// =============== Wishlist ===============
+/* ==================== Wishlist ==================== */
 const getWishlist = async () => {
   const { data } = await api.get(`${API_URL}/wishlist`);
   return data;
@@ -79,28 +79,27 @@ const isInWishlist = async (productId) => {
   return data.inWishlist === true;
 };
 
-// =============== Tiendas públicas ===============
-// --- Listado público de tiendas ---
+/* ==================== Tiendas públicas ==================== */
+// Listado público de tiendas (confirmado que existe: GET /api/users/stores?limit=)
 const getPublicStores = async ({ limit = 12 } = {}) => {
-  const { data } = await api.get(`/api/users/stores?limit=${limit}`);
-  return (data?.items || []).map(s => ({
+  const { data } = await api.get(`${API_URL}/stores?limit=${limit}`);
+  // Normalizamos a array de tiendas
+  return (data?.items || []).map((s) => ({
     _id: s._id,
     name: s.nombre || s.name,
-    slug: s.slug,               // si el backend lo manda
+    slug: s.slug || null,                     // si el backend lo manda
     logoUrl: s.fotoLogo || s.logoUrl || '',
     isActive: s.isActive ?? true,
   }));
 };
 
-// 2) Detalle de tienda por SLUG (confirmado: /api/stores/:slug)
+// Detalle de tienda por SLUG (confirmado: GET /api/stores/:slug)
 const getStoreBySlug = async (slug) => {
   const { data } = await api.get(`${STORES_API}/${slug}`);
-  // { _id, name, slug, logoUrl, isActive, ... }
-  return data;
+  return data; // { _id, name, slug, logoUrl, isActive, ... }
 };
 
-// 3) (Opcional) Productos de una tienda por SLUG
-// GET /api/stores/:slug/products?search=&page=&limit=&sort=
+// Productos de una tienda por SLUG (si tu backend lo tiene)
 const getStoreProductsBySlug = async (
   slug,
   { search = '', page = 1, limit = 12, sort = 'latest' } = {}
@@ -108,18 +107,16 @@ const getStoreProductsBySlug = async (
   const { data } = await api.get(
     `${STORES_API}/${slug}/products?search=${encodeURIComponent(search)}&page=${page}&limit=${limit}&sort=${sort}`
   );
-  // { items: [...], total, pages }
-  return data;
+  return data; // { items, total, pages }
 };
 
-// =============== (Legacy) Tienda pública por id/slug (antiguo) ===============
-// Manténlo solo si lo usa código viejo. Recomendado migrar a getStoreBySlug.
+// (Legacy) Tienda por id/slug —mantener temporalmente si hay código viejo
 const getStorePublicProfile = async (storeIdOrSlug) => {
   const { data } = await api.get(`${STORES_API}/${storeIdOrSlug}`);
   return data;
 };
 
-// =============== Suscripciones a tiendas ===============
+/* ==================== Suscripciones a tiendas ==================== */
 const getMySubscriptions = async () => {
   const { data } = await api.get(`${API_URL}/subscriptions`);
   return data;
@@ -130,10 +127,11 @@ const toggleSubscription = async (storeId) => {
   return data;
 };
 
-// =============== Admin ===============
+/* ==================== Admin ==================== */
+// Confirmado por tu prueba de consola: GET /api/admin/users
 const getUsers = async () => {
-  const { data } = await api.get(API_URL);
-  return data;
+  const { data } = await api.get('/api/admin/users');
+  return Array.isArray(data) ? data : (data.items || []);
 };
 
 const updateUserRole = async (id, roleData) => {
@@ -141,12 +139,8 @@ const updateUserRole = async (id, roleData) => {
   return data;
 };
 
-
-
-
-
-// =============== Exportación ===============
-export default {
+/* ==================== Export por defecto ==================== */
+const userService = {
   // Auth
   register,
   login,
@@ -177,3 +171,5 @@ export default {
   getUsers,
   updateUserRole,
 };
+
+export default userService;
