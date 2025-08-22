@@ -9,6 +9,12 @@ const getProducts = async (q = '', category = '') => {
   return data;
 };
 
+
+const getTopProducts = async (params = {}) => {
+  const { data } = await api.get('/api/products/top', { params });
+  return data; // { items: [...] }
+};
+
 const getProductById = async (id) => {
   const { data } = await api.get(`/api/products/${id}`);
   return data;
@@ -115,4 +121,6 @@ export default {
   getMySubscribers,
   subscribeToNewsletter,
   createProduct,
+  getTopProducts,
+  
 };
