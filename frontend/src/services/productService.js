@@ -61,7 +61,8 @@ const getCategories = async () => {
 };
 
 
-// === WISHLIST (ejemplo, si lo necesitas) ===
+// === WISHLIST ===
+
 const getWishlist = async () => {
     const { data } = await api.get('/users/wishlist');
     return data;
@@ -75,18 +76,35 @@ const removeFromWishlist = async (productId) => {
     await api.delete(`/users/wishlist/${productId}`);
 };
 
+// --- FUNCIÓN AÑADIDA Y OPTIMIZADA ---
+// Verifica si un producto específico ya está en la wishlist del usuario
+const isInWishlist = async (productId) => {
+    try {
+        const wishlist = await getWishlist(); // Obtiene la wishlist actual
+        // El método .some() es eficiente: devuelve true si encuentra una coincidencia y se detiene.
+        return wishlist.some(item => item._id === productId);
+    } catch (error) {
+        console.error("Error checking wishlist status", error);
+        return false; // Asume que no está en la lista si hay un error
+    }
+};
+
 
 const productService = {
+  // Productos
   getProducts,
   getProductById,
   getMyProducts,
   createProduct,
   updateProduct,
   deleteProduct,
+  // Categorías
   getCategories,
+  // Wishlist
   getWishlist,
   addToWishlist,
   removeFromWishlist,
+  isInWishlist, // <-- Asegúrate de que esté exportada
 };
 
 export default productService;

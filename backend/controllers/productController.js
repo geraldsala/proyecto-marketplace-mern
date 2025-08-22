@@ -1,67 +1,36 @@
 const asyncHandler = require('express-async-handler');
 const Product = require('../models/Product.js');
-<<<<<<< HEAD
-const Category = require('../models/categoryModel.js'); // Importamos el modelo de Categoría
-=======
-const Category = require('../models/categoryModel.js');
->>>>>>> 059cde66c3216e2912a1691e2a40bf15e4554a34
+const Category = require('../models/categoryModel.js'); 
 
-// @desc    Obtener todos los productos (con filtros opcionales y diagnóstico)
+// @desc    Obtener todos los productos (con filtros opcionales)
 // @route   GET /api/products
 // @access  Public
 const getProducts = asyncHandler(async (req, res) => {
-  console.log("\n--- INICIANDO PETICIÓN A /api/products ---");
+  const { keyword, category } = req.query;
+  const query = {};
 
-  const pageSize = 12;
-  const page = Number(req.query.pageNumber) || 1;
-  const queryFilter = {};
-
-  if (req.query.keyword) {
-    queryFilter.name = {
-      $regex: req.query.keyword,
-      $options: "i",
-    };
-    console.log(`[FILTRO] Palabra clave recibida: "${req.query.keyword}"`);
+  if (keyword) {
+    // Búsqueda por nombre o descripción del producto
+    query.nombre = { $regex: keyword, $options: 'i' };
   }
 
-  if (req.query.category) {
-    const categoryName = req.query.category;
-    console.log(`[FILTRO] Categoría solicitada: "${categoryName}"`);
-
-    console.log(`   -> Buscando en la colección 'categories' un documento con nombre: "${categoryName}"`);
-    const categoryDoc = await Category.findOne({
-      nombre: {
-        $regex: `^${categoryName}$`,
-        $options: "i",
-      },
-    });
-
-    // ESTE ES EL LOG MÁS IMPORTANTE
-    console.log("   -> Resultado de la búsqueda de categoría:", categoryDoc);
-
-    if (categoryDoc) {
-      console.log(`   -> ÉXITO: Categoría encontrada. ID: ${categoryDoc._id}`);
-      queryFilter.categoria = categoryDoc._id; // Campo 'categoria' del modelo Product
+  if (category) {
+    // Búsqueda por nombre de categoría para encontrar su ID
+    const categoryFound = await Category.findOne({ nombre: { $regex: category, $options: 'i' } });
+    if (categoryFound) {
+      query.categoria = categoryFound._id;
     } else {
-      console.log("   -> FALLO: No se encontró ningún documento para esa categoría.");
-      console.log("--- PETICIÓN FINALIZADA (Sin resultados) ---\n");
-      return res.json({ products: [], page: 1, pages: 0 });
+      // Si la categoría no existe, no devolvemos productos
+      return res.json([]);
     }
   }
 
-  console.log("[CONSULTA FINAL] Buscando productos con este filtro:", JSON.stringify(queryFilter));
-  const count = await Product.countDocuments(queryFilter);
-  console.log(`[RESULTADO] Se encontraron ${count} productos en total.`);
-  
-  const products = await Product.find(queryFilter)
-    .populate('categoria', 'nombre')
-    .limit(pageSize)
-    .skip(pageSize * (page - 1));
+  // Usamos .populate() para traer información de los modelos referenciados
+  const products = await Product.find(query)
+    .populate('tienda', 'nombreTienda fotoLogo') // Trae el nombre y logo de la tienda
+    .populate('categoria', 'nombre'); // Trae el nombre de la categoría
 
-  console.log(`   -> Devolviendo ${products.length} productos para la página actual.`);
-  console.log("--- PETICIÓN FINALIZADA ---\n");
-
-  res.json({ products, page, pages: Math.ceil(count / pageSize) });
+  res.json(products);
 });
 
 // @desc    Obtener un solo producto por ID
@@ -84,21 +53,35 @@ const getProductById = asyncHandler(async (req, res) => {
 // @route   POST /api/products
 // @access  Private/Tienda-Admin
 const createProduct = asyncHandler(async (req, res) => {
-  const { nombre, precio, descripcion, categoria, stock, estado, imagenes } = req.body;
+  try {
+    const defaultCategory = await Category.findOne();
+    if (!defaultCategory) {
+      res.status(400);
+      throw new Error('No hay categorías en la BD. Crea una primero.');
+    }
 
-  const product = new Product({
-    tienda: req.user._id,
-    nombre: nombre || 'Producto de Ejemplo',
-    precio: precio || 0,
-    descripcion: descripcion || 'Descripción de ejemplo',
-    categoria,
-    stock: stock || 0,
-    estado: estado || 'nuevo',
-    imagenes: imagenes || ['/images/sample.jpg'],
-  });
+    const product = new Product({
+      nombre: 'Producto de Ejemplo (Editar)',
+      precio: 0,
+      tienda: req.user._id,
+      imagenes: ['/images/sample.jpg'],
+      categoria: defaultCategory._id,
+      stock: 0,
+      descripcion: 'Descripción de ejemplo',
+      ubicacion: 'Ubicación de ejemplo',
+      // ¡OJO! Faltaba el campo 'estado' que es requerido
+      estado: 'nuevo', 
+    });
 
-  const createdProduct = await product.save();
-  res.status(201).json(createdProduct);
+    const createdProduct = await product.save();
+    res.status(201).json(createdProduct);
+
+  } catch (error) {
+
+    console.error('ERROR DETALLADO AL CREAR PRODUCTO:', error); 
+    
+    res.status(400).json({ message: error.message });
+  }
 });
 
 // @desc    Actualizar un producto
@@ -108,16 +91,21 @@ const updateProduct = asyncHandler(async (req, res) => {
   const product = await Product.findById(req.params.id);
 
   if (!product) {
-    res.status(404); throw new Error('Producto no encontrado');
+    res.status(404);
+    throw new Error('Producto no encontrado');
   }
 
+  // Verificamos que la tienda que actualiza sea la dueña del producto
+  // O que el usuario sea un admin
   if (product.tienda.toString() !== req.user._id.toString() && req.user.tipoUsuario !== 'admin') {
-    res.status(401); throw new Error('No autorizado para modificar este producto');
+    res.status(401);
+    throw new Error('No autorizado para modificar este producto');
   }
 
+  // Actualizamos todos los campos que vengan en el body
   const updatedProduct = await Product.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
+      new: true, // Devuelve el documento modificado
+      runValidators: true, // Corre las validaciones del esquema
   });
 
   res.json(updatedProduct);
@@ -130,11 +118,14 @@ const deleteProduct = asyncHandler(async (req, res) => {
   const product = await Product.findById(req.params.id);
 
   if (!product) {
-    res.status(404); throw new Error('Producto no encontrado');
+    res.status(404);
+    throw new Error('Producto no encontrado');
   }
 
+  // Misma verificación de propiedad que en update
   if (product.tienda.toString() !== req.user._id.toString() && req.user.tipoUsuario !== 'admin') {
-    res.status(401); throw new Error('No autorizado para eliminar este producto');
+    res.status(401);
+    throw new Error('No autorizado para eliminar este producto');
   }
 
   await product.deleteOne();
@@ -149,45 +140,6 @@ const getMyProducts = asyncHandler(async (req, res) => {
   res.json(products);
 });
 
-// @desc    Crear una nueva calificación/comentario para un producto
-// @route   POST /api/products/:id/reviews
-// @access  Private/Comprador
-const createProductReview = asyncHandler(async (req, res) => {
-  const { calificacion, comentario } = req.body;
-
-  const product = await Product.findById(req.params.id);
-
-  if (product) {
-    const alreadyReviewed = product.calificaciones.find(
-      (r) => r.usuario.toString() === req.user._id.toString()
-    );
-
-    if (alreadyReviewed) {
-      res.status(400);
-      throw new Error('Ya has calificado este producto');
-    }
-
-    const review = {
-      nombre: req.user.nombreCompleto,
-      calificacion: Number(calificacion),
-      comentario,
-      usuario: req.user._id,
-    };
-
-    product.calificaciones.push(review);
-    product.numCalificaciones = product.calificaciones.length;
-    product.calificacionPromedio =
-      product.calificaciones.reduce((acc, item) => item.calificacion + acc, 0) /
-      product.calificaciones.length;
-
-    await product.save();
-    res.status(201).json({ message: 'Calificación agregada' });
-  } else {
-    res.status(404);
-    throw new Error('Producto no encontrado');
-  }
-});
-
 module.exports = {
   getProducts,
   getProductById,
@@ -195,5 +147,4 @@ module.exports = {
   updateProduct,
   deleteProduct,
   getMyProducts,
-  createProductReview,
 };
