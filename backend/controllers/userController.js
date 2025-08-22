@@ -308,6 +308,59 @@ const checkWishlistStatus = asyncHandler(async (req, res) => {
 });
 
 
+/**
+ * @desc    Alternar la suscripción a una tienda
+ * @route   POST /api/users/subscriptions
+ */
+const toggleSubscription = asyncHandler(async (req, res) => {
+  const { storeId } = req.body;
+  const buyer = await User.findById(req.user._id);
+  const store = await User.findById(storeId);
+
+  if (!buyer || !store || store.tipoUsuario !== 'tienda') {
+    res.status(404);
+    throw new Error('Tienda no encontrada');
+  }
+
+  const isSubscribed = buyer.subscriptions.some(subId => subId.equals(storeId));
+
+  if (isSubscribed) {
+    // Dejar de seguir
+    await User.updateOne({ _id: buyer._id }, { $pull: { subscriptions: storeId } });
+    await User.updateOne({ _id: storeId }, { $pull: { subscribers: buyer._id } });
+    res.json({ message: 'Suscripción eliminada' });
+  } else {
+    // Seguir
+    await User.updateOne({ _id: buyer._id }, { $addToSet: { subscriptions: storeId } });
+    await User.updateOne({ _id: storeId }, { $addToSet: { subscribers: buyer._id } });
+    res.status(201).json({ message: 'Suscripción añadida' });
+  }
+});
+
+
+/**
+ * @desc    Obtener las suscripciones de un usuario
+ * @route   GET /api/users/subscriptions
+ */
+const getSubscriptions = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id).populate('subscriptions', 'nombreTienda fotoLogo');
+  if (user) {
+    res.json(user.subscriptions);
+  } else {
+    res.status(404);
+    throw new Error('Usuario no encontrado');
+  }
+});
+
+module.exports = {
+  // ... (tus otras exportaciones)
+  checkWishlistStatus,
+  // --- AÑADE ESTAS DOS LÍNEAS ---
+  toggleSubscription,
+  getSubscriptions,
+};
+
+
 module.exports = {
   authUser,
   registerUser,
@@ -321,4 +374,6 @@ module.exports = {
   addToWishlist,
   removeFromWishlist,
   checkWishlistStatus,
+  toggleSubscription,
+  getSubscriptions,
 };

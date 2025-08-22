@@ -77,14 +77,14 @@ const isInWishlist = async (productId) => {
 
 // --- Suscripciones a Tiendas ---
 const getMySubscriptions = async () => {
-    // Suponiendo que la ruta existe en el backend, por ejemplo en storeSubscriptionRoutes
-    const { data } = await api.get('/api/storesubscriptions/mystores');
-    return data;
+  // Corregido: apunta a la nueva ruta GET que creamos
+  const { data } = await api.get(`${API_URL}/subscriptions`);
+  return data;
 };
 const toggleSubscription = async (storeId) => {
-    // Suponiendo que la ruta existe
-    const { data } = await api.post('/api/storesubscriptions/toggle', { storeId });
-    return data;
+  // Corregido: apunta a la nueva ruta POST que creamos
+  const { data } = await api.post(`${API_URL}/subscriptions`, { storeId });
+  return data;
 };
 
 

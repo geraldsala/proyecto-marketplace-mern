@@ -258,6 +258,23 @@ const ProductPage = () => {
     }
   };
 
+const subscriptionHandler = async () => {
+  if (!userInfo) return navigate('/login');
+  if (!product || !product.tienda) return;
+
+  const storeId = typeof product.tienda === 'string' ? product.tienda : product.tienda._id;
+
+  try {
+    await userService.toggleSubscription(storeId);
+    setIsSubscribed(!isSubscribed);
+  } catch (err) {
+    console.error(err);
+    alert('No se pudo actualizar la suscripción.');
+  }
+};
+
+
+
   // PUBLICAR RESEÑA -> guarda en BD y refresca el producto
   const publicarResena = async () => {
     if (!userInfo) return navigate('/login');
@@ -505,8 +522,23 @@ const ProductPage = () => {
                   <strong className="ms-2">
                     {looksLikeObjectId(resolvedStoreName) ? 'Tienda' : resolvedStoreName}
                   </strong>
+
+                            {/* ===== AÑADE ESTE BOTÓN AQUÍ ===== */}
+                  {userInfo && userInfo.tipoUsuario === 'comprador' && product.tienda && (
+                    <Button
+                      variant={isSubscribed ? 'primary' : 'outline-primary'}
+                      size="sm"
+                      className="ms-3"
+                      onClick={subscriptionHandler}
+                    >
+                      {isSubscribed ? 'Siguiendo' : 'Seguir Tienda'}
+                    </Button>
+                  )}
+                  {/* ===== FIN DEL BOTÓN A AÑADIR ===== */}
+
                 </div>
               </div>
+
 
               {/* Ficha del producto */}
               <div className="card border-0 shadow-sm p-3 mt-3">

@@ -58,6 +58,8 @@ const userSchema = new mongoose.Schema(
     paymentMethods: { type: [paymentMethodSchema], default: [] },
 
     wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
+    subscriptions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Tiendas que sigue un comprador
+    subscribers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],   // Compradores que siguen a una tienda
   },
   { timestamps: true }
 );

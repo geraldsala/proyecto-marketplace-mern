@@ -1,0 +1,70 @@
+.contact-menu-container {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    z-index: 1000;
+}
+
+.main.button {
+    width: 55px;
+    height: 55px;
+    border-radius: 50%;
+    background-color: #007bff;
+    color: white;
+    font-size: 24px;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(0,0,0,2);
+}
+
+.contact-options{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.contact-button {
+    width: 50px;
+    height: 50px;
+    border-radius: 50px;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    background-color: white;
+    box-shadow: o 4px 8px rgba(0,0,0,1);
+}
+
+.contact-button.whatsapp {
+    color: #25D366;
+}
+
+.contact-button.support {
+    color: #ffcc00;
+}
+
+.support-form {
+    background: white;
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,1);
+    display: flex;
+    flex-direction: column;
+}
+
+.support-form input,
+.support-form textarea{
+    margin-bottom: 8px;
+    padding: 6px;
+    border: 1px solid #ccc; 
+    border-radius: 4px;
+}
+
+.support-form button {
+    padding: 6px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+}

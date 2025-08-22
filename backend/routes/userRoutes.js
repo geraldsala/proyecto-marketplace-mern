@@ -15,6 +15,8 @@ const {
   addToWishlist,        // <-- Importado para la wishlist
   removeFromWishlist,   // <-- Importado para la wishlist
   checkWishlistStatus,
+  toggleSubscription, // 
+  getSubscriptions,   // 
 } = require('../controllers/userController.js');
 
 const { protect, authorize } = require('../middlewares/authMiddleware.js');
@@ -48,5 +50,11 @@ router
 router
   .route('/wishlist/:productId/status')
   .get(protect, authorize('comprador'), checkWishlistStatus);  
+
+
+router
+  .route('/subscriptions')
+  .get(protect, authorize('comprador'), getSubscriptions)
+  .post(protect, authorize('comprador'), toggleSubscription);
 
 module.exports = router;
