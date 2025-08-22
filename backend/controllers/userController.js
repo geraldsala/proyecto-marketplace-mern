@@ -3,7 +3,10 @@ const asyncHandler = require('express-async-handler');
 const User = require('../models/User.js');
 const generateToken = require('../utils/generateToken.js');
 
-// ====== Auth existentes ======
+/**
+ * POST /api/users/login
+ * Autenticar usuario y obtener token
+ */
 const authUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
   const user = await User.findOne({ email });
@@ -22,9 +25,14 @@ const authUser = asyncHandler(async (req, res) => {
   }
 });
 
+/**
+ * POST /api/users/register
+ * Registrar un nuevo usuario
+ */
 const registerUser = asyncHandler(async (req, res) => {
   const { nombre, email, password, tipoUsuario } = req.body;
   const userExists = await User.findOne({ email });
+
   if (userExists) {
     res.status(400);
     throw new Error('El usuario ya existe');
@@ -46,62 +54,127 @@ const registerUser = asyncHandler(async (req, res) => {
   }
 });
 
+/**
+ * GET /api/users/profile
+ * Obtener perfil de usuario (con compatibilidad de campos antiguos)
+ */
 const getUserProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
   if (!user) {
     res.status(404);
     throw new Error('Usuario no encontrado');
   }
-  res.json(user);
+
+  // Backfill en memoria para compatibilidad (no altera DB)
+  const u = user.toObject();
+
+  if ((!u.addresses || u.addresses.length === 0) && u.direccionesEnvio && u.direccionesEnvio.length > 0) {
+    u.addresses = u.direccionesEnvio;
+  }
+  if ((!u.paymentMethods || u.paymentMethods.length === 0) && u.formasPago && u.formasPago.length > 0) {
+    u.paymentMethods = u.formasPago;
+  }
+
+  res.json(u);
 });
 
-// ====== NUEVO: Direcciones ======
+/**
+ * POST /api/users/addresses
+ * Agregar dirección de envío (acepta campos del formulario actual)
+ */
 const addShippingAddress = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
   if (!user) { res.status(404); throw new Error('Usuario no encontrado'); }
 
   const {
-    nombre, receptor, telefono, provincia, canton, distrito, direccion, zip, isDefault
+    titulo,
+    pais,
+    provincia,
+    direccion,
+    casillero,
+    codigoPostal,
+    observaciones,
+    isDefault
   } = req.body;
 
-  if (!nombre || !receptor || !telefono || !provincia || !canton || !distrito || !direccion) {
+  const direccionFinal = direccion || casillero;
+  if (!provincia || !direccionFinal) {
     res.status(400);
     throw new Error('Faltan campos requeridos de la dirección');
   }
 
-  const willBeDefault = isDefault || user.addresses.length === 0;
-  if (willBeDefault) user.addresses.forEach(a => (a.isDefault = false));
+  const willBeDefault = !!isDefault || (user.addresses?.length || 0) === 0;
 
-  user.addresses.push({
-    nombre, receptor, telefono, provincia, canton, distrito, direccion, zip,
+  if (willBeDefault) {
+    user.addresses.forEach(a => (a.isDefault = false));
+    user.direccionesEnvio.forEach(a => (a.isDefault = false));
+  }
+
+  const doc = {
+    nombre: titulo || 'Principal',
+    receptor: user.nombre || '',
+    telefono: user.telefono || '',
+    pais: pais || user.pais || '',
+    provincia,
+    canton: '',
+    distrito: '',
+    direccion: direccionFinal,
+    zip: codigoPostal || '',
+    observaciones: observaciones || '',
     isDefault: willBeDefault
-  });
+  };
+
+  // Guardamos en ambos arrays para compatibilidad
+  user.addresses.push(doc);
+  user.direccionesEnvio.push(doc);
 
   await user.save();
+
   const newAddress = user.addresses[user.addresses.length - 1];
   res.status(201).json(newAddress);
 });
 
+/**
+ * DELETE /api/users/addresses/:addressId
+ * Eliminar dirección de envío (borra en ambos arrays; re-asigna default si aplica)
+ */
 const deleteShippingAddress = asyncHandler(async (req, res) => {
   const { addressId } = req.params;
   const user = await User.findById(req.user._id);
   if (!user) { res.status(404); throw new Error('Usuario no encontrado'); }
 
-  const idx = user.addresses.findIndex(a => String(a._id) === String(addressId));
-  if (idx === -1) { res.status(404); throw new Error('Dirección no encontrada'); }
+  let idxNew = user.addresses.findIndex(a => String(a._id) === String(addressId));
+  let idxOld = user.direccionesEnvio.findIndex(a => String(a._id) === String(addressId));
 
-  const wasDefault = user.addresses[idx].isDefault;
-  user.addresses.splice(idx, 1);
+  if (idxNew === -1 && idxOld !== -1) {
+    const target = user.direccionesEnvio[idxOld];
+    idxNew = user.addresses.findIndex(a => a.direccion === target.direccion && a.provincia === target.provincia);
+  }
+  if (idxOld === -1 && idxNew !== -1) {
+    const target = user.addresses[idxNew];
+    idxOld = user.direccionesEnvio.findIndex(a => a.direccion === target.direccion && a.provincia === target.provincia);
+  }
 
-  if (wasDefault && user.addresses.length > 0) {
-    user.addresses[0].isDefault = true;
+  const wasDefault =
+    (idxNew !== -1 && user.addresses[idxNew]?.isDefault) ||
+    (idxOld !== -1 && user.direccionesEnvio[idxOld]?.isDefault);
+
+  if (idxNew !== -1) user.addresses.splice(idxNew, 1);
+  if (idxOld !== -1) user.direccionesEnvio.splice(idxOld, 1);
+
+  if (wasDefault) {
+    if (user.addresses.length > 0) user.addresses[0].isDefault = true;
+    if (user.direccionesEnvio.length > 0) user.direccionesEnvio[0].isDefault = true;
   }
 
   await user.save();
   res.json({ message: 'Dirección eliminada' });
 });
 
-// ====== NUEVO: Métodos de pago ======
+/**
+ * POST /api/users/paymentmethods
+ * Agregar método de pago (sin datos sensibles)
+ */
 const addPaymentMethod = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
   if (!user) { res.status(404); throw new Error('Usuario no encontrado'); }
@@ -113,30 +186,57 @@ const addPaymentMethod = asyncHandler(async (req, res) => {
   }
 
   const willBeDefault = isDefault || user.paymentMethods.length === 0;
-  if (willBeDefault) user.paymentMethods.forEach(m => (m.isDefault = false));
+  if (willBeDefault) {
+    user.paymentMethods.forEach(m => (m.isDefault = false));
+    user.formasPago.forEach(m => (m.isDefault = false));
+  }
 
-  user.paymentMethods.push({
-    brand, last4, holderName, expMonth, expYear, providerId, isDefault: willBeDefault
-  });
+  const doc = { brand, last4, holderName, expMonth, expYear, providerId, isDefault: willBeDefault };
+
+  // Guardar en ambos arrays para compatibilidad
+  user.paymentMethods.push(doc);
+  user.formasPago.push(doc);
 
   await user.save();
   const newMethod = user.paymentMethods[user.paymentMethods.length - 1];
   res.status(201).json(newMethod);
 });
 
+/**
+ * DELETE /api/users/paymentmethods/:methodId
+ * Eliminar método de pago (borra en ambos arrays; re-asigna default si aplica)
+ */
 const deletePaymentMethod = asyncHandler(async (req, res) => {
   const { methodId } = req.params;
   const user = await User.findById(req.user._id);
   if (!user) { res.status(404); throw new Error('Usuario no encontrado'); }
 
-  const idx = user.paymentMethods.findIndex(m => String(m._id) === String(methodId));
-  if (idx === -1) { res.status(404); throw new Error('Método de pago no encontrado'); }
+  let idxNew = user.paymentMethods.findIndex(m => String(m._id) === String(methodId));
+  let idxOld = user.formasPago.findIndex(m => String(m._id) === String(methodId));
 
-  const wasDefault = user.paymentMethods[idx].isDefault;
-  user.paymentMethods.splice(idx, 1);
+  if (idxNew === -1 && idxOld !== -1) {
+    const target = user.formasPago[idxOld];
+    idxNew = user.paymentMethods.findIndex(m =>
+      m.last4 === target.last4 && m.expMonth === target.expMonth && m.expYear === target.expYear
+    );
+  }
+  if (idxOld === -1 && idxNew !== -1) {
+    const target = user.paymentMethods[idxNew];
+    idxOld = user.formasPago.findIndex(m =>
+      m.last4 === target.last4 && m.expMonth === target.expMonth && m.expYear === target.expYear
+    );
+  }
 
-  if (wasDefault && user.paymentMethods.length > 0) {
-    user.paymentMethods[0].isDefault = true;
+  const wasDefault =
+    (idxNew !== -1 && user.paymentMethods[idxNew]?.isDefault) ||
+    (idxOld !== -1 && user.formasPago[idxOld]?.isDefault);
+
+  if (idxNew !== -1) user.paymentMethods.splice(idxNew, 1);
+  if (idxOld !== -1) user.formasPago.splice(idxOld, 1);
+
+  if (wasDefault) {
+    if (user.paymentMethods.length > 0) user.paymentMethods[0].isDefault = true;
+    if (user.formasPago.length > 0) user.formasPago[0].isDefault = true;
   }
 
   await user.save();
@@ -144,12 +244,9 @@ const deletePaymentMethod = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
-  // existentes
   authUser,
   registerUser,
   getUserProfile,
-
-  // nuevos
   addShippingAddress,
   deleteShippingAddress,
   addPaymentMethod,

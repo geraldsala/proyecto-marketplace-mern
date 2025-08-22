@@ -1,15 +1,15 @@
+// backend/server.js (fragmento)
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const connectDB = require('./config/db');
 
-// --- Importar rutas ---
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
-const userRoutes = require('./routes/userRoutes');
+const userRoutes = require('./routes/userRoutes'); // <- OK
 const categoryRoutes = require('./routes/categoryRoutes');
 const storeSubscriptionRoutes = require('./routes/storeSubscriptionRoutes');
-const subscribeRoutes = require('./routes/subscribeRoutes'); // <-- ASEGÚRATE DE QUE ESTA LÍNEA ESTÉ
+const subscribeRoutes = require('./routes/subscribeRoutes');
 
 const { notFound, errorHandler } = require('./middlewares/errorMiddleware.js');
 
@@ -20,19 +20,16 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// --- Definir rutas de la API ---
+// Montaje de rutas
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
-app.use('/api/users', userRoutes);
+app.use('/api/users', userRoutes); // <- OK
 app.use('/api/categories', categoryRoutes);
 app.use('/api/storesubscriptions', storeSubscriptionRoutes);
-app.use('/api/subscribe', subscribeRoutes); // 
+app.use('/api/subscribe', subscribeRoutes);
 
-app.get('/', (req, res) => {
-  res.send('API está corriendo...');
-});
+app.get('/api/health', (req, res) => res.json({ ok: true, time: new Date().toISOString() }));
 
-// --- Middleware para manejar errores ---
 app.use(notFound);
 app.use(errorHandler);
 
