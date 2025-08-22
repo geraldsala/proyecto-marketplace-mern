@@ -55,13 +55,13 @@ const markOrderPaid = asyncHandler(async (req, res) => {
 
   // 🔼 Incrementa soldCount por cada ítem
   // Asumiendo order.orderItems = [{ product: <ObjectId>, qty: Number }, ...]
-  const ops = order.orderItems.map(item => ({
+    const ops = order.orderItems.map(item => ({
     updateOne: {
-      filter: { _id: item.product },
-      update: { $inc: { soldCount: item.qty || 1 } },
+        filter: { _id: item.product },
+        update: { $inc: { soldCount: item.qty || 1 } },
     }
-  }));
-  if (ops.length) await Product.bulkWrite(ops);
+    }));
+    if (ops.length) await Product.bulkWrite(ops);
 
   res.json({ message: 'Orden pagada', orderId: order._id });
 });

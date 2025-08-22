@@ -14,6 +14,8 @@ const subscribeRoutes = require('./routes/subscribeRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const orderRoutes = require('./routes/orderRoutes.js');
 const paymentRoutes = require('./routes/paymentRoutes.js');
+const storeRoutes = require('./routes/storeRoutes');
+const userAdminRoutes = require('./routes/userAdminRoutes');
 
 const { notFound, errorHandler } = require('./middlewares/errorMiddleware.js');
 
@@ -52,6 +54,8 @@ app.use('/api/subscribe', subscribeRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api', storeRoutes);
+app.use('/api', userAdminRoutes);
 
 app.get('/api/health', (req, res) =>
   res.json({ ok: true, time: new Date().toISOString() })

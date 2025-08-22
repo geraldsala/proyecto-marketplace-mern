@@ -10,6 +10,7 @@ import ProductCard from '../components/ProductCard';
 import ProductCardSkeleton from '../components/ProductCardSkeleton';
 import SubscribeModal from './SubscribeModal';
 import './HomePage.css';
+import userService from '../services/userService';
 
 // --- Imágenes locales ---
 import laptopImg from '../assets/images/category-laptops.jpg';
@@ -18,18 +19,50 @@ import celularesImg from '../assets/images/category-celulares.jpg';
 import smarthomeImg from '../assets/images/category-smarthome.jpg';
 
 const HomePage = () => {
-  // Últimos productos
+  // === Tiendas públicas (NUEVO) ===
+  const [stores, setStores] = useState([]);
+  const [loadingStores, setLoadingStores] = useState(true);
+  const [errorStores, setErrorStores] = useState('');
+
+  // Fallback de slug por si el backend no lo manda
+  const slugify = (str = '') =>
+    str
+      .toString()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)+/g, '');
+
+  // === Últimos productos ===
   const [products, setProducts] = useState([]);
   const [loadingLatest, setLoadingLatest] = useState(true);
   const [errorLatest, setErrorLatest] = useState('');
 
-  // Más vendidos
+  // === Más vendidos ===
   const [top, setTop] = useState([]);
   const [loadingTop, setLoadingTop] = useState(true);
   const [errorTop, setErrorTop] = useState('');
 
-  // Modal de suscripción
+  // === Modal de suscripción ===
   const [showSubscribe, setShowSubscribe] = useState(false);
+
+  // Carga de tiendas (NUEVO)
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoadingStores(true);
+        const list = await userService.getPublicStores({ limit: 12 });
+        setStores(list); // [{_id,name,slug,logoUrl,isActive}]
+        setErrorStores('');
+      } catch (e) {
+        console.error('Error al cargar tiendas:', e);
+        setStores([]);
+        setErrorStores('No se pudieron cargar las tiendas.');
+      } finally {
+        setLoadingStores(false);
+      }
+    })();
+  }, []);
 
   // Carga de últimos productos
   useEffect(() => {
@@ -37,7 +70,6 @@ const HomePage = () => {
       try {
         setLoadingLatest(true);
         const productsFromAPI = await productService.getProducts();
-        // console.log("Productos recibidos de la API:", productsFromAPI);
         setProducts((productsFromAPI || []).slice(0, 8));
       } catch (err) {
         setErrorLatest('No se pudieron cargar los productos.');
@@ -55,7 +87,6 @@ const HomePage = () => {
       try {
         setLoadingTop(true);
         const res = await productService.getTopProducts({ limit: 12 });
-        // res: { items: [...] }
         setTop(res?.items || []);
       } catch (err) {
         setErrorTop('No se pudieron cargar los productos más vendidos.');
@@ -132,6 +163,70 @@ const HomePage = () => {
             </Carousel.Caption>
           </Carousel.Item>
         </Carousel>
+      </Container>
+
+      {/* SECCIÓN DE TIENDAS DESTACADAS (NUEVO) */}
+      <Container className="my-5">
+        <div className="section-title-container">
+          <h2 className="section-title">Tiendas destacadas</h2>
+          <p className="section-subtitle">Conoce a los vendedores del marketplace y visita sus vitrinas.</p>
+        </div>
+
+        {loadingStores && (
+          <div className="py-4 text-center">
+            <Spinner animation="border" />
+            <div className="mt-2">Cargando tiendas...</div>
+          </div>
+        )}
+
+        {!loadingStores && errorStores && <Alert variant="danger">{errorStores}</Alert>}
+
+        {!loadingStores && !errorStores && (
+          stores.length > 0 ? (
+            <Row className="g-3">
+              {stores.map((s) => {
+                const slug = s.slug || slugify(s.name);
+                return (
+                  <Col key={s._id} xs={12} sm={6} md={4} lg={3}>
+                    <Card className="h-100 text-center">
+                      <Link
+                          to={slug ? `/tienda/${slug}` : '#'}
+                          className={`text-decoration-none${!slug ? ' disabled' : ''}`}
+                      >
+                        <div className="d-flex align-items-center justify-content-center p-4">
+                          {s.logoUrl ? (
+                            <img
+                              src={s.logoUrl}
+                              alt={s.name}
+                              style={{ height: 64, objectFit: 'contain' }}
+                            />
+                          ) : (
+                            <div
+                              className="bg-light d-flex align-items-center justify-content-center"
+                              style={{ width: 128, height: 64 }}
+                            >
+                              <span className="text-muted">Sin logo</span>
+                            </div>
+                          )}
+                        </div>
+                        <Card.Body>
+                          <Card.Title className="h6 mb-1">{s.name}</Card.Title>
+                          {slug ? (
+                            <div className="text-muted"><code>/tienda/{slug}</code></div>
+                          ) : (
+                            <div className="text-muted">Sin slug</div>
+                          )}
+                        </Card.Body>
+                      </Link>
+                    </Card>
+                  </Col>
+                );
+              })}
+            </Row>
+          ) : (
+            <Alert variant="info">Aún no hay tiendas públicas para mostrar.</Alert>
+          )
+        )}
       </Container>
 
       {/* SECCIÓN DE CATEGORÍAS */}
