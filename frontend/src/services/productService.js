@@ -62,6 +62,13 @@ const subscribeToNewsletter = async (email) => {
   return data; // { message: '...' }
 };
 
+const createProduct = async () => {
+  // Enviamos un POST vacío. El backend se encarga de rellenar los datos de muestra.
+  const { data } = await api.post('/api/products', {}); 
+  return data;
+};
+
+
 export default {
   getProducts,
   getProductById,
@@ -71,5 +78,6 @@ export default {
   toggleSubscription,
   getMySubscriptions,
   getMySubscribers,
-  subscribeToNewsletter
+  subscribeToNewsletter,
+  createProduct
 };

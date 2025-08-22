@@ -48,5 +48,10 @@ app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
 app.use(notFound);
 app.use(errorHandler);
 
+app.use((req, res, next) => {
+  console.log(`[SERVER] Petición recibida: ${req.method} ${req.originalUrl}`);
+  next();
+});
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Servidor corriendo en el puerto ${PORT}`));

@@ -33,7 +33,7 @@ const productSchema = mongoose.Schema({
   // --- Logística (Campos renombrados por claridad) ---
   tiempoPromedioEnvio: { type: String, default: 'variable' },
   costoEnvio: { type: Number, required: true, default: 0 },
-  ubicacionFisica: { type: String, required: true },
+  ubicacionFisica: { type: String },
   
   // --- Calificaciones y Reviews (Campo renombrado) ---
   reviews: [reviewSchema],

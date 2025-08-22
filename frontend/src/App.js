@@ -26,6 +26,7 @@ import Celulares from './pages/celulares';
 import Smart from './pages/smart';
 import NewsletterPopup from './components/NewsletterPopup';
 import CheckoutPage from './pages/CheckoutPage';
+import OrderPage from './pages/OrderPage';
 
 function App() {
   return (
@@ -35,7 +36,7 @@ function App() {
       <Header />
       <main className='py-3'>
         <Container>
-          {/* El componente <Routes> le dice al router dónde empezar a buscar coincidencias */}
+          
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/producto/:id" element={<ProductPage />} />
@@ -54,8 +55,8 @@ function App() {
             <Route path="/search/:keyword" element={<SearchPage />} />
             <Route path="/cart" element={<CartPage />} />
             <Route path='/checkout' element={<CheckoutPage />} />
-            {/* Puedes añadir una ruta "catch-all" para errores 404 si quieres */}
-            {/* <Route path="*" element={<NotFoundPage />} /> */}
+            <Route path="/order/:id" element={<OrderPage />} />
+
           </Routes>
         </Container>
       </main>

@@ -89,8 +89,10 @@ const CheckoutPage = () => {
                         precio: item.precio, product: item._id,
                     })),
                     shippingAddress: {
-                        direccion: fullAddress.direccion, ciudad: fullAddress.provincia,
-                        codigoPostal: fullAddress.zip, pais: fullAddress.pais,
+                        direccion: fullAddress.direccion,
+                        ciudad: fullAddress.provincia,
+                        codigoPostal: fullAddress.zip || 'N/A', // <-- CORRECCIÓN AQUÍ
+                        pais: fullAddress.pais,
                     },
                     paymentMethod: paymentMethodTab,
                     paymentResult: {
@@ -101,7 +103,7 @@ const CheckoutPage = () => {
                 };
 
                 const createdOrder = await orderService.createOrder(orderData);
-                // clearCart(); 
+                if (clearCart) clearCart(); // Llama a clearCart si existe
                 navigate(`/order/${createdOrder._id}`);
             }
         } catch (err) {
