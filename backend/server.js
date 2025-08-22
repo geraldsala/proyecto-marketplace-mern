@@ -15,6 +15,7 @@ const storeSubscriptionRoutes = require('./routes/storeSubscriptionRoutes');
 const subscribeRoutes = require('./routes/subscribeRoutes');
 const uploadRoutes = require('./routes/uploadRoutes'); // <-- 2. AÑADIDO: Importamos la nueva ruta de subida
 const orderRoutes = require('./routes/orderRoutes.js'); // 
+const paymentRoutes = require('./routes/paymentRoutes.js');
 
 const { notFound, errorHandler } = require('./middlewares/errorMiddleware.js');
 
@@ -34,6 +35,7 @@ app.use('/api/storesubscriptions', storeSubscriptionRoutes);
 app.use('/api/subscribe', subscribeRoutes);
 app.use('/api/upload', uploadRoutes); // <-- 3. AÑADIDO: Usamos la nueva ruta
 app.use('/api/orders', orderRoutes); 
+app.use('/api/payments', paymentRoutes);
 
 app.get('/api/health', (req, res) => res.json({ ok: true, time: new Date().toISOString() }));
 
