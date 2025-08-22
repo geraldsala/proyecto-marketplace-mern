@@ -60,18 +60,21 @@ const registerUser = asyncHandler(async (req, res) => {
  */
 const getUserProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
-  if (!user) {
-    res.status(404);
-    throw new Error('Usuario no encontrado');
-  }
+  if (!user) { res.status(404); throw new Error('Usuario no encontrado'); }
 
-  // Backfill en memoria para compatibilidad (no altera DB)
   const u = user.toObject();
 
-  if ((!u.addresses || u.addresses.length === 0) && u.direccionesEnvio && u.direccionesEnvio.length > 0) {
+  // Normaliza arrays inexistentes a []
+  if (!Array.isArray(u.addresses)) u.addresses = [];
+  if (!Array.isArray(u.paymentMethods)) u.paymentMethods = [];
+  if (!Array.isArray(u.direccionesEnvio)) u.direccionesEnvio = [];
+  if (!Array.isArray(u.formasPago)) u.formasPago = [];
+
+  // Backfill para compatibilidad
+  if (u.addresses.length === 0 && u.direccionesEnvio.length > 0) {
     u.addresses = u.direccionesEnvio;
   }
-  if ((!u.paymentMethods || u.paymentMethods.length === 0) && u.formasPago && u.formasPago.length > 0) {
+  if (u.paymentMethods.length === 0 && u.formasPago.length > 0) {
     u.paymentMethods = u.formasPago;
   }
 
@@ -85,6 +88,10 @@ const getUserProfile = asyncHandler(async (req, res) => {
 const addShippingAddress = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
   if (!user) { res.status(404); throw new Error('Usuario no encontrado'); }
+
+  // Asegura arrays
+  if (!Array.isArray(user.addresses)) user.addresses = [];
+  if (!Array.isArray(user.direccionesEnvio)) user.direccionesEnvio = [];
 
   const {
     titulo,
@@ -103,11 +110,12 @@ const addShippingAddress = asyncHandler(async (req, res) => {
     throw new Error('Faltan campos requeridos de la dirección');
   }
 
-  const willBeDefault = !!isDefault || (user.addresses?.length || 0) === 0;
+  const totalPrevio = (user.addresses?.length || 0) + (user.direccionesEnvio?.length || 0);
+  const willBeDefault = !!isDefault || totalPrevio === 0;
 
   if (willBeDefault) {
-    user.addresses.forEach(a => (a.isDefault = false));
-    user.direccionesEnvio.forEach(a => (a.isDefault = false));
+    (user.addresses || []).forEach(a => (a.isDefault = false));
+    (user.direccionesEnvio || []).forEach(a => (a.isDefault = false));
   }
 
   const doc = {
@@ -124,14 +132,11 @@ const addShippingAddress = asyncHandler(async (req, res) => {
     isDefault: willBeDefault
   };
 
-  // Guardamos en ambos arrays para compatibilidad
   user.addresses.push(doc);
   user.direccionesEnvio.push(doc);
 
   await user.save();
-
-  const newAddress = user.addresses[user.addresses.length - 1];
-  res.status(201).json(newAddress);
+  return res.status(201).json({ addresses: user.addresses });
 });
 
 /**
@@ -142,6 +147,9 @@ const deleteShippingAddress = asyncHandler(async (req, res) => {
   const { addressId } = req.params;
   const user = await User.findById(req.user._id);
   if (!user) { res.status(404); throw new Error('Usuario no encontrado'); }
+
+  if (!Array.isArray(user.addresses)) user.addresses = [];
+  if (!Array.isArray(user.direccionesEnvio)) user.direccionesEnvio = [];
 
   let idxNew = user.addresses.findIndex(a => String(a._id) === String(addressId));
   let idxOld = user.direccionesEnvio.findIndex(a => String(a._id) === String(addressId));
@@ -168,7 +176,7 @@ const deleteShippingAddress = asyncHandler(async (req, res) => {
   }
 
   await user.save();
-  res.json({ message: 'Dirección eliminada' });
+  return res.json({ addresses: user.addresses });
 });
 
 /**
@@ -179,21 +187,25 @@ const addPaymentMethod = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
   if (!user) { res.status(404); throw new Error('Usuario no encontrado'); }
 
+  if (!Array.isArray(user.paymentMethods)) user.paymentMethods = [];
+  if (!Array.isArray(user.formasPago)) user.formasPago = [];
+
   const { brand, last4, holderName, expMonth, expYear, providerId, isDefault } = req.body;
   if (!brand || !last4 || !holderName || !expMonth || !expYear) {
     res.status(400);
     throw new Error('Faltan campos requeridos del método de pago');
   }
 
-  const willBeDefault = isDefault || user.paymentMethods.length === 0;
+  const totalPrevio = (user.paymentMethods?.length || 0) + (user.formasPago?.length || 0);
+  const willBeDefault = !!isDefault || totalPrevio === 0;
+
   if (willBeDefault) {
-    user.paymentMethods.forEach(m => (m.isDefault = false));
-    user.formasPago.forEach(m => (m.isDefault = false));
+    (user.paymentMethods || []).forEach(m => (m.isDefault = false));
+    (user.formasPago || []).forEach(m => (m.isDefault = false));
   }
 
   const doc = { brand, last4, holderName, expMonth, expYear, providerId, isDefault: willBeDefault };
 
-  // Guardar en ambos arrays para compatibilidad
   user.paymentMethods.push(doc);
   user.formasPago.push(doc);
 
