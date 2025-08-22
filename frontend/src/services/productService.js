@@ -1,9 +1,6 @@
+// frontend/src/services/productService.js
 import api from './api';
 
-/**
- * Productos
- * Hacemos flexible los nombres de query por si tu backend usa 'q/category' o 'search/categoria'.
- */
 const getProducts = async (q = '', category = '') => {
   const params = {};
   if (q) { params.q = q; params.search = q; }
@@ -17,61 +14,73 @@ const getProductById = async (id) => {
   return data;
 };
 
-/**
- * Wishlist
- * Ajusta las rutas si tu backend usa otras.
- */
+// ===== Reseñas =====
+const addReview = async (id, { rating, comment }) => {
+  // Token manual + no-cache por si tu instancia api no lo añade sola
+  let headers = {
+    'Content-Type': 'application/json',
+    'Cache-Control': 'no-cache',
+    Pragma: 'no-cache',
+    Expires: '0',
+  };
+  try {
+    const raw = localStorage.getItem('userInfo');
+    if (raw) {
+      const { token } = JSON.parse(raw) || {};
+      if (token) headers.Authorization = `Bearer ${token}`;
+    }
+  } catch {}
+
+  const { data } = await api.post(
+    `/api/products/${id}/reviews`,
+    { rating, comment },
+    { headers }
+  );
+  return data; // producto actualizado
+};
+
+// ===== Wishlist =====
 const isInWishlist = async (productId) => {
   const { data } = await api.get(`/api/users/wishlist/${productId}/status`);
   return !!data?.inWishlist;
 };
-
 const addToWishlist = async (productId) => {
   const { data } = await api.post('/api/users/wishlist', { productId });
   return data;
 };
-
 const removeFromWishlist = async (productId) => {
   const { data } = await api.delete(`/api/users/wishlist/${productId}`);
   return data;
 };
 
-/**
- * Suscripciones a tiendas (coinciden con tu backend)
- */
+// ===== Suscripciones =====
 const toggleSubscription = async (storeId) => {
   const { data } = await api.post('/api/storesubscriptions/toggle', { storeId });
-  return data; // { message: '...' }
+  return data;
 };
-
 const getMySubscriptions = async () => {
   const { data } = await api.get('/api/storesubscriptions/mystores');
-  return data; // [{ _id, nombreTienda, fotoLogo }]
+  return data;
 };
-
 const getMySubscribers = async () => {
   const { data } = await api.get('/api/storesubscriptions/mysubscribers');
-  return data; // [{ _id, nombre, fotoLogo }]
-};
-
-/**
- * Newsletter
- */
-const subscribeToNewsletter = async (email) => {
-  const { data } = await api.post('/api/subscribe/newsletter', { email });
-  return data; // { message: '...' }
-};
-
-const createProduct = async () => {
-  // Enviamos un POST vacío. El backend se encarga de rellenar los datos de muestra.
-  const { data } = await api.post('/api/products', {}); 
   return data;
 };
 
+// ===== Newsletter / Crear muestra =====
+const subscribeToNewsletter = async (email) => {
+  const { data } = await api.post('/api/subscribe/newsletter', { email });
+  return data;
+};
+const createProduct = async () => {
+  const { data } = await api.post('/api/products', {});
+  return data;
+};
 
 export default {
   getProducts,
   getProductById,
+  addReview, // <-- importante
   isInWishlist,
   addToWishlist,
   removeFromWishlist,
@@ -79,5 +88,5 @@ export default {
   getMySubscriptions,
   getMySubscribers,
   subscribeToNewsletter,
-  createProduct
+  createProduct,
 };

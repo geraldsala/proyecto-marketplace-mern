@@ -1,20 +1,18 @@
 // backend/server.js
-
-const path = require('path'); // <-- 1. AÑADIDO: Módulo 'path' para manejar rutas de archivos
+const path = require('path');
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const connectDB = require('./config/db');
 
-// Importación de rutas
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
 const userRoutes = require('./routes/userRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const storeSubscriptionRoutes = require('./routes/storeSubscriptionRoutes');
 const subscribeRoutes = require('./routes/subscribeRoutes');
-const uploadRoutes = require('./routes/uploadRoutes'); // <-- 2. AÑADIDO: Importamos la nueva ruta de subida
-const orderRoutes = require('./routes/orderRoutes.js'); // 
+const uploadRoutes = require('./routes/uploadRoutes');
+const orderRoutes = require('./routes/orderRoutes.js');
 const paymentRoutes = require('./routes/paymentRoutes.js');
 
 const { notFound, errorHandler } = require('./middlewares/errorMiddleware.js');
@@ -23,35 +21,48 @@ dotenv.config();
 connectDB();
 
 const app = express();
-app.use(express.json());
-app.use(cors());
 
-// Montaje de rutas
+// ---- Middlewares base (ANTES de las rutas) ----
+app.use(cors());
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true }));
+
+// Logging sencillo
+app.use((req, _res, next) => {
+  console.log(`[SERVER] ${req.method} ${req.originalUrl}`);
+  next();
+});
+
+// Evitar caché en llamadas XHR/Fetch
+app.use((req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  res.set('Surrogate-Control', 'no-store');
+  next();
+});
+
+// ---- Rutas API ----
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/storesubscriptions', storeSubscriptionRoutes);
 app.use('/api/subscribe', subscribeRoutes);
-app.use('/api/upload', uploadRoutes); // <-- 3. AÑADIDO: Usamos la nueva ruta
-app.use('/api/orders', orderRoutes); 
+app.use('/api/upload', uploadRoutes);
+app.use('/api/orders', orderRoutes);
 app.use('/api/payments', paymentRoutes);
 
-app.get('/api/health', (req, res) => res.json({ ok: true, time: new Date().toISOString() }));
+app.get('/api/health', (req, res) =>
+  res.json({ ok: true, time: new Date().toISOString() })
+);
 
-// --- 4. AÑADIDO: Hacemos la carpeta 'uploads' estática/pública ---
-// __dirname apunta al directorio actual (en este caso, la carpeta 'backend')
+// Carpeta pública para archivos subidos
 app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
-// ----------------------------------------------------------------
 
-// Middlewares de manejo de errores (deben ir al final)
+// ---- Manejo de errores (AL FINAL) ----
 app.use(notFound);
 app.use(errorHandler);
-
-app.use((req, res, next) => {
-  console.log(`[SERVER] Petición recibida: ${req.method} ${req.originalUrl}`);
-  next();
-});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Servidor corriendo en el puerto ${PORT}`));
