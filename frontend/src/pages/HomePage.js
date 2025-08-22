@@ -5,6 +5,8 @@ import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faLaptop, faHeadphones, faMobileAlt, faHome } from '@fortawesome/free-solid-svg-icons';
 
+import FeaturedStores from '../components/home/FeaturedStores';
+
 import productService from '../services/productService';
 import ProductCard from '../components/ProductCard';
 import ProductCardSkeleton from '../components/ProductCardSkeleton';
@@ -19,7 +21,7 @@ import celularesImg from '../assets/images/category-celulares.jpg';
 import smarthomeImg from '../assets/images/category-smarthome.jpg';
 
 const HomePage = () => {
-  // === Tiendas públicas (NUEVO) ===
+  // === Tiendas públicas ===
   const [stores, setStores] = useState([]);
   const [loadingStores, setLoadingStores] = useState(true);
   const [errorStores, setErrorStores] = useState('');
@@ -32,6 +34,18 @@ const HomePage = () => {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)+/g, '');
+
+  // Fallbacks de imágenes para tiendas (covers vistosas)
+  const fallbackCovers = [
+    'https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?q=80&w=1200&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1511735111819-9a3f7709049c?q=80&w=1200&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1520975682031-ae8e8e4b9a4e?q=80&w=1200&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=1200&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=1200&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=1200&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1518544801976-3e188bc18ef1?q=80&w=1200&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1460353581641-37baddab0fa2?q=80&w=1200&auto=format&fit=crop',
+  ];
 
   // === Últimos productos ===
   const [products, setProducts] = useState([]);
@@ -46,13 +60,20 @@ const HomePage = () => {
   // === Modal de suscripción ===
   const [showSubscribe, setShowSubscribe] = useState(false);
 
-  // Carga de tiendas (NUEVO)
+  // Carga de tiendas
   useEffect(() => {
     (async () => {
       try {
         setLoadingStores(true);
         const list = await userService.getPublicStores({ limit: 12 });
-        setStores(list); // [{_id,name,slug,logoUrl,isActive}]
+        // list: [{ _id, name, slug, logoUrl, coverUrl, tagline }]
+        const mapped = (list || []).map((s, idx) => ({
+          id: s.slug || slugify(s.name) || s._id, // FeaturedStores usará esto para el link
+          nombre: s.name || 'Tienda',
+          descripcion: s.tagline || 'Vitrina destacada',
+          img: s.coverUrl || s.logoUrl || fallbackCovers[idx % fallbackCovers.length],
+        }));
+        setStores(mapped);
         setErrorStores('');
       } catch (e) {
         console.error('Error al cargar tiendas:', e);
@@ -165,7 +186,7 @@ const HomePage = () => {
         </Carousel>
       </Container>
 
-      {/* SECCIÓN DE TIENDAS DESTACADAS (NUEVO) */}
+      {/* SECCIÓN DE TIENDAS DESTACADAS */}
       <Container className="my-5">
         <div className="section-title-container">
           <h2 className="section-title">Tiendas destacadas</h2>
@@ -183,46 +204,7 @@ const HomePage = () => {
 
         {!loadingStores && !errorStores && (
           stores.length > 0 ? (
-            <Row className="g-3">
-              {stores.map((s) => {
-                const slug = s.slug || slugify(s.name);
-                return (
-                  <Col key={s._id} xs={12} sm={6} md={4} lg={3}>
-                    <Card className="h-100 text-center">
-                      <Link
-                          to={slug ? `/tienda/${slug}` : '#'}
-                          className={`text-decoration-none${!slug ? ' disabled' : ''}`}
-                      >
-                        <div className="d-flex align-items-center justify-content-center p-4">
-                          {s.logoUrl ? (
-                            <img
-                              src={s.logoUrl}
-                              alt={s.name}
-                              style={{ height: 64, objectFit: 'contain' }}
-                            />
-                          ) : (
-                            <div
-                              className="bg-light d-flex align-items-center justify-content-center"
-                              style={{ width: 128, height: 64 }}
-                            >
-                              <span className="text-muted">Sin logo</span>
-                            </div>
-                          )}
-                        </div>
-                        <Card.Body>
-                          <Card.Title className="h6 mb-1">{s.name}</Card.Title>
-                          {slug ? (
-                            <div className="text-muted"><code>/tienda/{slug}</code></div>
-                          ) : (
-                            <div className="text-muted">Sin slug</div>
-                          )}
-                        </Card.Body>
-                      </Link>
-                    </Card>
-                  </Col>
-                );
-              })}
-            </Row>
+            <FeaturedStores stores={stores} />
           ) : (
             <Alert variant="info">Aún no hay tiendas públicas para mostrar.</Alert>
           )
@@ -233,7 +215,7 @@ const HomePage = () => {
       <Container className="my-5">
         <div className="section-title-container">
           <h2 className="section-title">Explora por Categoría</h2>
-          <p className="section-subtitle">Encuentra exactamente lo que buscas en nuestras secciones especializadas.</p>
+        <p className="section-subtitle">Encuentra exactamente lo que buscas en nuestras secciones especializadas.</p>
         </div>
         <Row>
           {categories.map((cat) => (
