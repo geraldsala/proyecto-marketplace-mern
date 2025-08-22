@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Container, Table, Button, Alert, Spinner, Modal, Form } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUsers, faEdit } from '@fortawesome/free-solid-svg-icons';
-import AuthContext from '../context/AuthContext';
+import { AuthContext } from '../context/AuthContext';
 import userService from '../services/userService';
 
 const AdminPage = () => {

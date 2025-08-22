@@ -1,5 +1,4 @@
 // frontend/src/pages/detallesaudio.js
-// frontend/src/pages/detallesaudio.js
 import React, { useMemo, useState, useEffect } from 'react';
 import { Container, Row, Col, Button, Form, Badge, Alert, Spinner, Modal } from 'react-bootstrap';
 import { useParams } from 'react-router-dom';
@@ -19,11 +18,7 @@ import './detallesaudio.css';
 /* ----------------- Helpers de reportes (localStorage) ----------------- */
 const REPORTS_KEY = 'reports:v1';
 function getReportsMap() {
-  try {
-    return JSON.parse(localStorage.getItem(REPORTS_KEY) || '{}');
-  } catch {
-    return {};
-  }
+  try { return JSON.parse(localStorage.getItem(REPORTS_KEY) || '{}'); } catch { return {}; }
 }
 function getReportCount(productId) {
   const map = getReportsMap();
@@ -37,6 +32,16 @@ function addReport(productId) {
 }
 function isDisabledByReports(productId) {
   return getReportCount(productId) >= 10;
+}
+
+/* --------------------- Helpers de wishlist (fallback) ------------------ */
+const WL_KEY = 'wishlist:ids';
+function wlGetSet() {
+  try { return new Set(JSON.parse(localStorage.getItem(WL_KEY) || '[]')); }
+  catch { return new Set(); }
+}
+function wlSave(set) {
+  localStorage.setItem(WL_KEY, JSON.stringify([...set]));
 }
 
 /* --------------------------- Estrellas UI ----------------------------- */
@@ -109,13 +114,18 @@ export default function DetallesAudio() {
   const [coment, setComent] = useState('');
   const [reseñasUI, setReseñasUI] = useState([]);
 
-  // Reporte (idéntico a detalleslap)
+  // Reporte
   const [showReport, setShowReport] = useState(false);
   const [reportCat, setReportCat] = useState('');
   const [reportDetails, setReportDetails] = useState('');
   const [reportSuccess, setReportSuccess] = useState('');
   const [reportCount, setReportCount] = useState(0);
   const [isDisabled, setIsDisabled] = useState(false);
+
+  // Wishlist (igual que detalleslap)
+  const [inWishlist, setInWishlist] = useState(false);
+  const [wishMsg, setWishMsg] = useState('');
+  const [wishLoading, setWishLoading] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -132,6 +142,16 @@ export default function DetallesAudio() {
         const currentCount = getReportCount(normalized.id || id);
         setReportCount(currentCount);
         setIsDisabled(isDisabledByReports(normalized.id || id));
+
+        // --- Estado de wishlist ---
+        const pid = normalized.id || id;
+        if (productService.isInWishlist) {
+          const ok = await productService.isInWishlist(pid);
+          setInWishlist(!!ok);
+        } else {
+          const s = wlGetSet();
+          setInWishlist(s.has(pid));
+        }
       } catch (err) {
         setError('No se pudo encontrar el producto solicitado.');
       } finally {
@@ -143,7 +163,7 @@ export default function DetallesAudio() {
 
   const precioTotal = useMemo(() => {
     if (!product) return 0;
-    return (product.precio * qty) + product.costoEnvio;
+    return product.precio * qty + product.costoEnvio;
   }, [qty, product]);
 
   const disponible = !!product && product.stock > 0 && !isDisabled;
@@ -188,11 +208,48 @@ export default function DetallesAudio() {
     setReportCat('');
     setReportDetails('');
 
-    if (newCount >= 10) {
-      setIsDisabled(true);
+    if (newCount >= 10) setIsDisabled(true);
+  };
+
+  /* ------------------------- Wishlist toggle ---------------------- */
+  const toggleWishlist = async () => {
+    if (!product) return;
+    const pid = product.id || id;
+    setWishLoading(true);
+    setWishMsg('');
+
+    try {
+      if (inWishlist) {
+        if (productService.removeFromWishlist) {
+          await productService.removeFromWishlist(pid);
+        } else {
+          const s = wlGetSet();
+          s.delete(pid);
+          wlSave(s);
+        }
+        setInWishlist(false);
+        setWishMsg('Eliminado de tu wishlist.');
+      } else {
+        if (productService.addToWishlist) {
+          await productService.addToWishlist(pid);
+        } else {
+          const s = wlGetSet();
+          s.add(pid);
+          wlSave(s);
+        }
+        setInWishlist(true);
+        setWishMsg('Agregado a tu wishlist.');
+      }
+      setTimeout(() => setWishMsg(''), 1500);
+    } catch (e) {
+      setWishMsg('No se pudo actualizar la wishlist.');
+      setTimeout(() => setWishMsg(''), 2000);
+    } finally {
+      setWishLoading(false);
     }
   };
 
+  /* ------------------------ Loading / Error ----------------------- */
   if (loading) {
     return (
       <Container className="text-center py-5">
@@ -222,6 +279,11 @@ export default function DetallesAudio() {
       {reportSuccess && (
         <Alert variant="success" className="mb-3" onClose={() => setReportSuccess('')} dismissible>
           {reportSuccess}
+        </Alert>
+      )}
+      {wishMsg && (
+        <Alert variant="info" className="mb-3" onClose={() => setWishMsg('')} dismissible>
+          {wishMsg}
         </Alert>
       )}
 
@@ -296,7 +358,7 @@ export default function DetallesAudio() {
               <span className="ms-3 text-muted">Reportes: {reportCount}</span>
             </div>
 
-            {/* Acciones (botón Reportar idéntico al de detalleslap) */}
+            {/* Acciones */}
             <Row className="g-2 mt-3 align-items-end">
               <Col xs="6" sm="4">
                 <Form.Group>
@@ -309,9 +371,7 @@ export default function DetallesAudio() {
                     autoComplete="off"
                     inputMode="numeric"
                     onChange={(e) =>
-                      setQty(
-                        Math.max(1, Math.min(product.stock || 1, Number(e.target.value) || 1))
-                      )
+                      setQty(Math.max(1, Math.min(product.stock || 1, Number(e.target.value) || 1)))
                     }
                     disabled={!disponible}
                   />
@@ -322,10 +382,17 @@ export default function DetallesAudio() {
                   <FontAwesomeIcon icon={faCartPlus} className="me-2" />
                   Añadir al carrito
                 </Button>
-                <Button variant="outline-secondary" disabled={isDisabled}>
+
+                <Button
+                  variant={inWishlist ? 'secondary' : 'outline-secondary'}
+                  onClick={toggleWishlist}
+                  disabled={wishLoading || isDisabled}
+                  title={inWishlist ? 'Quitar de wishlist' : 'Agregar a wishlist'}
+                >
                   <FontAwesomeIcon icon={faHeart} className="me-2" />
-                  Wishlist
+                  {inWishlist ? 'En wishlist' : 'Wishlist'}
                 </Button>
+
                 <Button
                   variant="outline-dark"
                   onClick={() => setShowReport(true)}

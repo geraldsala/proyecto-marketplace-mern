@@ -1,23 +1,21 @@
-// backend/routes/categoryRoutes.js
 const express = require('express');
 const router = express.Router();
-const asyncHandler = require('express-async-handler');
-const Category = require('../models/categoryModel');
+const {
+  getCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+} = require('../controllers/categoryController.js');
+const { protect, authorize } = require('../middlewares/authMiddleware.js');
 
-/**
- * @desc    Obtener todas las categorías
- * @route   GET /api/categories
- * @access  Público
- */
-router.get(
-  '/',
-  asyncHandler(async (req, res) => {
-    // Buscar todas las categorías en la base de datos
-    const categories = await Category.find({});
+// Ruta Pública para ver categorías
+router.route('/').get(getCategories);
 
-    // Enviar las categorías como una respuesta JSON
-    res.json(categories);
-  })
-);
+// Rutas de Admin/Tienda para gestionar categorías
+router.route('/').post(protect, authorize('admin', 'tienda'), createCategory);
+router
+  .route('/:id')
+  .put(protect, authorize('admin', 'tienda'), updateCategory)
+  .delete(protect, authorize('admin', 'tienda'), deleteCategory);
 
 module.exports = router;

@@ -1,143 +1,92 @@
-// frontend/src/services/productService.js
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api/products';
-const WL_URL  = 'http://localhost:5000/api/wishlist';
+const API_BASE_URL = 'http://localhost:5000/api';
 
-// ------- helpers auth -------
-function getToken() {
+const api = axios.create({
+  baseURL: API_BASE_URL,
+});
+
+// Interceptor para añadir el token de autenticación a todas las peticiones
+api.interceptors.request.use((config) => {
   try {
-    const raw = localStorage.getItem('userInfo');
-    if (!raw) return '';
-    const { token } = JSON.parse(raw) || {};
-    return token || '';
-  } catch {
-    return '';
+    const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+    if (userInfo && userInfo.token) {
+      config.headers.Authorization = `Bearer ${userInfo.token}`;
+    }
+  } catch (error) {
+    console.error("Error parsing user info from localStorage", error);
   }
-}
-function authConfig() {
-  const token = getToken();
-  return token
-    ? { headers: { Authorization: `Bearer ${token}` } }
-    : {};
-}
+  return config;
+});
 
-// ------- fallback localStorage -------
-const WL_KEY = 'wishlist:ids';
-function wlGetSet() {
-  try { return new Set(JSON.parse(localStorage.getItem(WL_KEY) || '[]')); }
-  catch { return new Set(); }
-}
-function wlSave(set) {
-  localStorage.setItem(WL_KEY, JSON.stringify([...set]));
-}
 
-// ================== Productos ==================
-const getProducts = async (keyword = '', category = '') => {
-  const { data } = await axios.get(`${API_URL}?keyword=${encodeURIComponent(keyword)}&category=${encodeURIComponent(category)}`);
+// === PRODUCTOS ===
+
+const getProducts = async () => {
+  const { data } = await api.get('/products');
   return data;
 };
 
 const getProductById = async (id) => {
-  const { data } = await axios.get(`${API_URL}/${id}`);
+  const { data } = await api.get(`/products/${id}`);
   return data;
 };
 
 const getMyProducts = async () => {
-  const config = authConfig();
-  const { data } = await axios.get(`${API_URL}/myproducts`, config);
+  const { data } = await api.get('/products/myproducts');
   return data;
 };
 
 const createProduct = async () => {
-  const config = authConfig();
-  const { data } = await axios.post(API_URL, {}, config);
+  // El backend crea un producto de ejemplo, por eso el body es vacío {}
+  const { data } = await api.post('/products', {});
   return data;
 };
 
 const updateProduct = async (id, productData) => {
-  const config = { ...authConfig(), headers: { ...(authConfig().headers || {}), 'Content-Type': 'application/json' } };
-  const { data } = await axios.put(`${API_URL}/${id}`, productData, config);
+  const { data } = await api.put(`/products/${id}`, productData);
   return data;
 };
 
 const deleteProduct = async (id) => {
-  const config = authConfig();
-  await axios.delete(`${API_URL}/${id}`, config);
+  await api.delete(`/products/${id}`);
 };
 
-// ================== Wishlist ==================
-// Comprueba si un producto está en la wishlist
-const isInWishlist = async (productId) => {
-  const config = authConfig();
-  try {
-    const { data } = await axios.get(`${WL_URL}/has/${productId}`, config);
-    return !!data?.inWishlist;
-  } catch (err) {
-    // Fallback local
-    const set = wlGetSet();
-    return set.has(String(productId));
-  }
+
+// === CATEGORÍAS ===
+
+const getCategories = async () => {
+    const { data } = await api.get('/categories');
+    return data;
 };
 
-// Añade un producto a la wishlist
-const addToWishlist = async (productId) => {
-  const config = authConfig();
-  try {
-    await axios.post(`${WL_URL}/${productId}`, {}, config);
-    return true;
-  } catch (err) {
-    // Fallback local
-    const set = wlGetSet();
-    set.add(String(productId));
-    wlSave(set);
-    return true;
-  }
-};
 
-// Quita un producto de la wishlist
-const removeFromWishlist = async (productId) => {
-  const config = authConfig();
-  try {
-    await axios.delete(`${WL_URL}/${productId}`, config);
-    return true;
-  } catch (err) {
-    // Fallback local
-    const set = wlGetSet();
-    set.delete(String(productId));
-    wlSave(set);
-    return true;
-  }
-};
-
-// Devuelve la lista de productos en wishlist
+// === WISHLIST (ejemplo, si lo necesitas) ===
 const getWishlist = async () => {
-  const config = authConfig();
-  try {
-    const { data } = await axios.get(WL_URL, config);
-    return Array.isArray(data) ? data : [];
-  } catch (err) {
-    // Fallback local: tenemos solo IDs, traemos los productos uno a uno
-    const set = wlGetSet();
-    const ids = [...set];
-    const items = await Promise.all(ids.map((id) => getProductById(id).catch(() => null)));
-    return items.filter(Boolean);
-  }
+    const { data } = await api.get('/users/wishlist');
+    return data;
 };
+
+const addToWishlist = async (productId) => {
+    await api.post(`/users/wishlist/${productId}`);
+};
+
+const removeFromWishlist = async (productId) => {
+    await api.delete(`/users/wishlist/${productId}`);
+};
+
 
 const productService = {
-  // productos
   getProducts,
   getProductById,
   getMyProducts,
   createProduct,
   updateProduct,
   deleteProduct,
-  // wishlist
-  isInWishlist,
+  getCategories,
+  getWishlist,
   addToWishlist,
   removeFromWishlist,
-  getWishlist,
 };
 
 export default productService;

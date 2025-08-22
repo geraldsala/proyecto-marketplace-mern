@@ -1,55 +1,56 @@
 import React from 'react';
-import { Card } from 'react-bootstrap';
-import { Link } from 'react-router-dom';
+import { Card, Button } from 'react-bootstrap';
+import { LinkContainer } from 'react-router-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTruckFast } from '@fortawesome/free-solid-svg-icons';
 
-const ProductCard = ({ product }) => {
-  // Función para determinar la ruta correcta según la categoría
-  const getProductLink = (category) => {
-    // Verificamos si la categoría es un string válido antes de usar toLowerCase()
-    const safeCategory = typeof category === 'string' ? category : '';
+// Esta es una suposición de cómo se ve tu CSS, puedes necesitar ajustar las clases
+import './ProductCard.css'; 
 
-    switch (safeCategory.toLowerCase()) {
-      case 'laptops':
-        return `/producto/laptop/${product._id}`;
-      case 'audio':
-        return `/producto/audio/${product._id}`;
-      case 'celulares':
-        return `/producto/celular/${product._id}`;
-      case 'smart home':
-        return `/producto/smart/${product._id}`;
-      default:
-        return `/product/${product._id}`;
-    }
+const ProductCard = ({ product }) => {
+  
+  // Función para obtener la ruta base de la categoría
+  const getCategoryPath = (category) => {
+    if (!category) return 'producto'; // Ruta genérica por si acaso
+    
+    // El backend nos devuelve la categoría como objeto o como string (ID)
+    const categoryName = (typeof category === 'object' ? category.nombre : String(category)).toLowerCase();
+    
+    if (categoryName.includes('portátiles') || categoryName.includes('laptop')) return 'laptop';
+    if (categoryName.includes('audio')) return 'audio';
+    if (categoryName.includes('celular')) return 'celular';
+    if (categoryName.includes('smart')) return 'smart';
+
+    return 'producto'; // Fallback
   };
 
-  return (
-    <Card className="my-3 rounded shadow-sm h-100 product-card-hover">
-      <Link to={getProductLink(product.categoria)}>
-        <Card.Img src={product.imagenes[0]} variant="top" className="product-card-img" />
-      </Link>
-      <Card.Body className="d-flex flex-column">
-        <Link to={getProductLink(product.categoria)} className="text-decoration-none">
-          <Card.Title as="div" className="product-title">
-            <strong>{product.nombre}</strong>
-          </Card.Title>
-        </Link>
-        
-        <div className="product-brand text-muted mb-2">{product.brand}</div>
+  const categoryPath = getCategoryPath(product.categoria);
 
-        <Card.Text as="div" className="mt-auto">
-          <div className="mb-2">
-            <FontAwesomeIcon icon={faTruckFast} className="me-2" color="var(--accent-primary)" />
-            <small className="text-muted">{product.tiempoEnvio}</small>
-          </div>
-          
-          <h3 className="product-price">
-            ₡{product.precio.toLocaleString('es-CR')}
-          </h3>
-        </Card.Text>
-      </Card.Body>
-    </Card>
+  return (
+    <article className="product-card">
+      <div className="thumb">
+        {product.stock === 0 && <span className="badge-out">SIN STOCK</span>}
+        <img src={product.imagenes?.[0]} alt={product.nombre} />
+      </div>
+      <div className="p-body">
+        <div className="badges">
+          {product.tiempoEnvio && 
+            <span className="badge-ship">
+              <FontAwesomeIcon icon={faTruckFast} className="me-1" />
+              {product.tiempoEnvio}
+            </span>
+          }
+        </div>
+        <h6 className="title">{product.nombre}</h6>
+        <div className="price">₡{product.precio.toLocaleString('es-CR')}</div>
+        <div className="actions">
+          <LinkContainer to={`/producto/${categoryPath}/${product._id}`}>
+            <Button size="sm" variant="dark">Ver detalle</Button>
+          </LinkContainer>
+          <Button size="sm" variant="outline-dark">Agregar</Button>
+        </div>
+      </div>
+    </article>
   );
 };
 

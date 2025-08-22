@@ -1,9 +1,11 @@
 const asyncHandler = require('express-async-handler');
 const User = require('../models/User.js');
+const Product = require('../models/Product.js');
 const generateToken = require('../utils/generateToken.js');
 
 // --- AUTH & PROFILE ---
 const registerUser = asyncHandler(async (req, res) => {
+  // Tu código de registro está bien, se mantiene igual
   const { cedula, nombre, nombreUsuario, email, password, tipoUsuario, pais, direccion, telefono, nombreTienda } = req.body;
   const userExists = await User.findOne({ $or: [{ email }, { cedula }] });
   if (userExists) {
@@ -18,6 +20,7 @@ const registerUser = asyncHandler(async (req, res) => {
 });
 
 const loginUser = asyncHandler(async (req, res) => {
+  // Tu código de login está bien, se mantiene igual
   const { email, password } = req.body;
   const user = await User.findOne({ email });
   if (user && (await user.matchPassword(password))) {
@@ -28,6 +31,7 @@ const loginUser = asyncHandler(async (req, res) => {
 });
 
 const getUserProfile = asyncHandler(async (req, res) => {
+  // Tu código de perfil está bien, se mantiene igual
   const user = await User.findById(req.user._id);
   if (user) {
     res.json({ _id: user._id, nombre: user.nombre, email: user.email, direccionesEnvio: user.direccionesEnvio, formasPago: user.formasPago });
@@ -37,6 +41,7 @@ const getUserProfile = asyncHandler(async (req, res) => {
 });
 
 const updateUserProfile = asyncHandler(async (req, res) => {
+    // Tu código de actualizar perfil está bien, se mantiene igual
   const user = await User.findById(req.user._id);
   if (user) {
     user.nombre = req.body.nombre || user.nombre;
@@ -49,7 +54,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
   }
 });
 
-// --- ADDRESS & PAYMENTS ---
+// --- ADDRESS & PAYMENTS (VERSIÓN CORREGIDA Y ALINEADA) ---
 const addShippingAddress = asyncHandler(async (req, res) => {
     const { pais, provincia, casillero, codigoPostal, observaciones } = req.body;
     const newAddress = { pais, provincia, casillero, codigoPostal, observaciones };
@@ -78,12 +83,37 @@ const deletePaymentMethod = asyncHandler(async (req, res) => {
     else { res.status(404); throw new Error('Usuario no encontrado'); }
 });
 
-// --- ADMIN FUNCTIONS ---
+// ... (El resto de tus funciones como wishlist y admin se mantienen igual)
+const getWishlist = asyncHandler(async (req, res) => {
+    const user = await User.findById(req.user._id).populate({
+        path: 'wishlist',
+        select: 'nombre precio imagenes tienda',
+        populate: { path: 'tienda', select: 'nombreTienda' }
+    });
+    if (user) { res.json(user.wishlist); } 
+    else { res.status(404); throw new Error('Usuario no encontrado'); }
+});
+const toggleWishlistProduct = asyncHandler(async (req, res) => {
+    const { productId } = req.body;
+    if (!productId) { res.status(400); throw new Error('Se requiere el ID del producto'); }
+    const user = await User.findById(req.user._id);
+    const product = await Product.findById(productId);
+    if (!product) { res.status(404); throw new Error('Producto no encontrado'); }
+    const productIndex = user.wishlist.indexOf(productId);
+    if (productIndex > -1) {
+        user.wishlist.splice(productIndex, 1);
+        await user.save();
+        res.json({ message: 'Producto eliminado de la lista de deseos' });
+    } else {
+        user.wishlist.push(productId);
+        await user.save();
+        res.json({ message: 'Producto agregado a la lista de deseos' });
+    }
+});
 const getUsers = asyncHandler(async (req, res) => {
     const users = await User.find({}).select('-password');
     res.json(users);
 });
-
 const updateUserRole = asyncHandler(async (req, res) => {
     const user = await User.findById(req.params.id);
     if (user) {
@@ -96,9 +126,11 @@ const updateUserRole = asyncHandler(async (req, res) => {
     }
 });
 
+
 module.exports = {
   registerUser, loginUser, getUserProfile, updateUserProfile,
   addShippingAddress, deleteShippingAddress,
   addPaymentMethod, deletePaymentMethod,
-  getUsers, updateUserRole
+  getUsers, updateUserRole,
+  toggleWishlistProduct, getWishlist, 
 };

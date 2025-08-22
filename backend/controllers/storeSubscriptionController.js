@@ -1,23 +1,24 @@
-// backend/controllers/storeSubscriptionController.js
+const express = require('express');
+const router = express.Router();
+const {
+  toggleSubscription,
+  getMySubscriptions,
+  getMySubscribers,
+} = require('../controllers/storeSubscriptionController.js');
+const { protect, authorize } = require('../middlewares/authMiddleware.js');
 
-const asyncHandler = require('express-async-handler');
+// --- Rutas para Compradores ---
 
-exports.getAllSubscriptions = asyncHandler(async (req, res) => {
-  res.json({ message: 'Obteniendo todas las suscripciones' });
-});
+// POST /api/storesubscriptions/toggle -> Suscribirse/desuscribirse de una tienda
+router.post('/toggle', protect, authorize('comprador'), toggleSubscription);
 
-exports.getSubscriptionByUserId = asyncHandler(async (req, res) => {
-  res.json({ message: 'Obteniendo suscripción por ID de usuario' });
-});
+// GET /api/storesubscriptions/mystores -> Ver las tiendas a las que está suscrito
+router.get('/mystores', protect, authorize('comprador'), getMySubscriptions);
 
-exports.createSubscription = asyncHandler(async (req, res) => {
-  res.json({ message: 'Creando una nueva suscripción' });
-});
 
-exports.updateSubscriptionStatus = asyncHandler(async (req, res) => {
-  res.json({ message: 'Actualizando estado de suscripción' });
-});
+// --- Ruta para Tiendas ---
 
-exports.deleteSubscription = asyncHandler(async (req, res) => {
-  res.json({ message: 'Eliminando suscripción' });
-});
+// GET /api/storesubscriptions/mysubscribers -> Ver los usuarios que están suscritos a su tienda
+router.get('/mysubscribers', protect, authorize('tienda'), getMySubscribers);
+
+module.exports = router;

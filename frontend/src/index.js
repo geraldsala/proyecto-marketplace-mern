@@ -1,18 +1,23 @@
+// frontend/src/index.js
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import 'bootstrap/dist/css/bootstrap.min.css'; // Ruta corregida
+import { CartProvider } from './context/CartContext'; // <-- IMPORTANTE
+import 'bootstrap/dist/css/bootstrap.min.css';
 import './index.css';
 import App from './App';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <AuthProvider>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <CartProvider> {/* <-- ENVOLVEMOS LA APP CON EL CARRITO */}
+          <App />
+        </CartProvider>
+      </AuthProvider>
+    </BrowserRouter>
   </React.StrictMode>
 );

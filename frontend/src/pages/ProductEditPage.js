@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Form, Button, Container, Row, Col, Alert, Spinner, Card } from 'react-bootstrap';
 import productService from '../services/productService';
-import AuthContext from '../context/AuthContext';
+import { AuthContext } from '../context/AuthContext';
 
 const ProductEditPage = () => {
   const { id: productId } = useParams();

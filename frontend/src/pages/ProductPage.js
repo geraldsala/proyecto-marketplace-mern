@@ -1,103 +1,196 @@
-// frontend/src/pages/ProductPage.js
 import React, { useState, useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { Row, Col, Image, ListGroup, Button, Card, Alert } from 'react-bootstrap';
-import productService from '../services/productService';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { Container, Row, Col, Image, ListGroup, Card, Button, Spinner, Alert, Form, Modal } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faStar } from '@fortawesome/free-solid-svg-icons';
-import { Container } from 'react-bootstrap';
+import { faHeart as faHeartSolid } from '@fortawesome/free-solid-svg-icons';
+import { faHeart as faHeartRegular } from '@fortawesome/free-regular-svg-icons';
+import productService from '../services/productService';
+import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext'; // Importamos el contexto de autenticación
 
 const ProductPage = () => {
-  const { id } = useParams();
+  // --- Estados existentes ---
   const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [qty, setQty] = useState(1);
 
+  // --- NUEVOS ESTADOS PARA WISHLIST Y REPORTES ---
+  const [isInWishlist, setIsInWishlist] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+
+  // --- Hooks ---
+  const { id: productId } = useParams();
+  const { addToCart } = useCart();
+  const { userInfo } = useAuth(); // Obtenemos la info del usuario para la wishlist
+  const navigate = useNavigate();
+
+  // --- Efecto principal para cargar el producto ---
   useEffect(() => {
     const fetchProduct = async () => {
+      setLoading(true);
       try {
-        const productFromAPI = await productService.getProductById(id);
-        setProduct(productFromAPI);
+        const data = await productService.getProductById(productId);
+        setProduct(data);
       } catch (err) {
-        setError('Producto no encontrado. Revisa la URL.');
+        setError('No se pudo encontrar el producto.');
+      } finally {
+        setLoading(false);
       }
     };
     fetchProduct();
-  }, [id]);
+  }, [productId]);
 
-  if (error) {
-    return (
-      <Container className='mt-5 text-center'>
-        <Alert variant='danger'>{error}</Alert>
-      </Container>
-    );
-  }
+  // --- NUEVO EFECTO PARA VERIFICAR LA WISHLIST ---
+  // Se ejecuta después de cargar el producto y si el usuario está logueado
+  useEffect(() => {
+    const checkWishlistStatus = async () => {
+      if (userInfo && product) {
+        try {
+          const wishlist = await productService.getWishlist();
+          const productInWishlist = wishlist.some(item => item._id === product._id);
+          setIsInWishlist(productInWishlist);
+        } catch (wishlistError) {
+          console.error("Error al verificar la wishlist", wishlistError);
+        }
+      }
+    };
+    checkWishlistStatus();
+  }, [product, userInfo]);
 
-  if (!product) {
-    return (
-      <Container className='mt-5 text-center'>
-        <h3>Cargando producto...</h3>
-      </Container>
-    );
-  }
+
+  // --- MANEJADORES DE EVENTOS (HANDLERS) ---
+  const addToCartHandler = () => {
+    addToCart(product, Number(qty));
+    navigate('/cart');
+  };
+
+  const wishlistHandler = async () => {
+    if (!userInfo) {
+      navigate('/login');
+      return;
+    }
+    try {
+      await productService.toggleWishlist(product._id);
+      setIsInWishlist(!isInWishlist); // Actualizamos el estado visualmente
+    } catch (err) {
+      alert('No se pudo actualizar la wishlist.');
+    }
+  };
+
+  const reportHandler = () => {
+    // Aquí iría la lógica para enviar el reporte al backend
+    console.log("Reporte enviado");
+    setShowReportModal(false);
+  };
+
+
+  if (loading) return <Container className="text-center py-5"><Spinner animation="border" /></Container>;
+  if (error) return <Container className="py-5"><Alert variant="danger">{error}</Alert></Container>;
 
   return (
-    <Container className='py-3'>
-      <Link className='btn btn-light my-3' to='/'>
+    <Container className="py-4">
+      <Link className="btn btn-light my-3" to={-1}>
         Volver
       </Link>
-      <Row>
-        <Col md={6}>
-          <Image src={product.imagenes[0]} alt={product.nombre} fluid />
-        </Col>
-        <Col md={3}>
-          <ListGroup variant='flush'>
-            <ListGroup.Item>
-              <h3>{product.nombre}</h3>
-            </ListGroup.Item>
-            <ListGroup.Item>
-              <div className='my-3'>
-                {product.calificacionPromedio} <FontAwesomeIcon icon={faStar} className='text-warning' />
-                {' '}de {product.numCalificaciones} opiniones
+      {product && (
+        <>
+          <Row>
+            {/* Columna de Imagen */}
+            <Col md={6} className="mb-3">
+              <Image src={product.imagenes?.[0]} alt={product.nombre} fluid />
+            </Col>
+
+            {/* Columna de Info Principal */}
+            <Col md={3} className="mb-3">
+              <ListGroup variant="flush">
+                <ListGroup.Item><h3>{product.nombre}</h3></ListGroup.Item>
+                <ListGroup.Item>Precio: ₡{product.precio?.toLocaleString('es-CR')}</ListGroup.Item>
+                <ListGroup.Item>Descripción: {product.descripcion}</ListGroup.Item>
+              </ListGroup>
+            </Col>
+
+            {/* Columna de Acciones (Carrito, etc.) */}
+            <Col md={3} className="mb-3">
+              <Card>
+                <ListGroup variant="flush">
+                  <ListGroup.Item>
+                    <Row><Col>Precio:</Col><Col><strong>₡{product.precio?.toLocaleString('es-CR')}</strong></Col></Row>
+                  </ListGroup.Item>
+                  <ListGroup.Item>
+                    <Row><Col>Estado:</Col><Col>{product.stock > 0 ? 'En Stock' : 'Agotado'}</Col></Row>
+                  </ListGroup.Item>
+                  {product.stock > 0 && (
+                    <ListGroup.Item>
+                      <Row>
+                        <Col>Cantidad:</Col>
+                        <Col>
+                          <Form.Control as="select" value={qty} onChange={(e) => setQty(e.target.value)}>
+                            {[...Array(product.stock).keys()].map((x) => (
+                              <option key={x + 1} value={x + 1}>{x + 1}</option>
+                            ))}
+                          </Form.Control>
+                        </Col>
+                      </Row>
+                    </ListGroup.Item>
+                  )}
+                  <ListGroup.Item className="d-grid">
+                    <Button onClick={addToCartHandler} variant="dark" type="button" disabled={product.stock === 0}>
+                      Agregar al Carrito
+                    </Button>
+                  </ListGroup.Item>
+
+                  {/* --- NUEVA SECCIÓN DE BOTONES ADICIONALES --- */}
+                  <ListGroup.Item className="d-flex justify-content-center align-items-center">
+                    <Button variant="link" onClick={wishlistHandler} className="text-danger">
+                      <FontAwesomeIcon icon={isInWishlist ? faHeartSolid : faHeartRegular} className="me-2" />
+                      {isInWishlist ? 'En mi Wishlist' : 'Añadir a Wishlist'}
+                    </Button>
+                  </ListGroup.Item>
+
+                </ListGroup>
+              </Card>
+              <div className="text-center mt-3">
+                 <Button variant="link" size="sm" onClick={() => setShowReportModal(true)}>
+                    Reportar producto
+                 </Button>
               </div>
-            </ListGroup.Item>
-            <ListGroup.Item>Precio: ${product.precio}</ListGroup.Item>
-            <ListGroup.Item>Descripción: {product.descripcion}</ListGroup.Item>
-          </ListGroup>
-        </Col>
-        <Col md={3}>
-          <Card>
-            <ListGroup variant='flush'>
-              <ListGroup.Item>
-                <Row>
-                  <Col>Precio:</Col>
-                  <Col><strong>${product.precio}</strong></Col>
-                </Row>
-              </ListGroup.Item>
-              <ListGroup.Item>
-                <Row>
-                  <Col>Stock:</Col>
-                  <Col>{product.stock > 0 ? 'En Stock' : 'Agotado'}</Col>
-                </Row>
-              </ListGroup.Item>
-              <ListGroup.Item className='text-center'>
-                <Button className='btn-block' type='button' disabled={product.stock === 0}>
-                  Agregar al Carrito
-                </Button>
-              </ListGroup.Item>
-            </ListGroup>
-          </Card>
-        </Col>
-      </Row>
-      <Row className='mt-5'>
-        <Col md={12}>
-          <h3>Especificaciones Técnicas</h3>
-          <ListGroup variant='flush'>
-            <ListGroup.Item><strong>Modelo:</strong> {product.especificacionesTecnicas.modelo}</ListGroup.Item>
-            <ListGroup.Item><strong>RAM:</strong> {product.especificacionesTecnicas.ram}</ListGroup.Item>
-            <ListGroup.Item><strong>Compatibilidad:</strong> {product.especificacionesTecnicas.compatibilidad}</ListGroup.Item>
-          </ListGroup>
-        </Col>
-      </Row>
+            </Col>
+          </Row>
+
+          {/* --- NUEVO MODAL PARA REPORTAR PRODUCTO --- */}
+          <Modal show={showReportModal} onHide={() => setShowReportModal(false)}>
+            <Modal.Header closeButton>
+              <Modal.Title>Reportar Producto</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+              <Form>
+                <Form.Group className="mb-3" controlId="reportReason">
+                  <Form.Label>Motivo del reporte</Form.Label>
+                  <Form.Select>
+                    <option>Información incorrecta</option>
+                    <option>Producto fraudulento</option>
+                    <option>Contenido inapropiado</option>
+                    <option>Otro</option>
+                  </Form.Select>
+                </Form.Group>
+                <Form.Group className="mb-3" controlId="reportComment">
+                  <Form.Label>Comentarios adicionales</Form.Label>
+                  <Form.Control as="textarea" rows={3} placeholder="Describa el problema..." />
+                </Form.Group>
+              </Form>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button variant="secondary" onClick={() => setShowReportModal(false)}>
+                Cancelar
+              </Button>
+              <Button variant="primary" onClick={reportHandler}>
+                Enviar Reporte
+              </Button>
+            </Modal.Footer>
+          </Modal>
+        </>
+      )}
     </Container>
   );
 };

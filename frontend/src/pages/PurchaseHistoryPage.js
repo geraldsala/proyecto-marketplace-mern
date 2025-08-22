@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Table, Button, Alert } from 'react-bootstrap';
 import axios from 'axios';
-import AuthContext from '../context/AuthContext';
+import { AuthContext } from '../context/AuthContext';
 import { Container } from 'react-bootstrap';
 
 const PurchaseHistoryPage = () => {

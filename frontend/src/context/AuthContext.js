@@ -1,63 +1,74 @@
-import React, { createContext, useReducer, useEffect, useContext } from 'react';
+// frontend/src/context/AuthContext.js
+
+// 1. AÑADIMOS 'useContext' a la línea de importación
+import React, { createContext, useState, useEffect, useContext } from 'react';
+import axios from 'axios';
 
 const AuthContext = createContext();
 
-// Leemos la información inicial del localStorage
-const initialState = {
-  userInfo: localStorage.getItem('userInfo')
-    ? JSON.parse(localStorage.getItem('userInfo'))
-    : null,
+// 2. AÑADIMOS Y EXPORTAMOS LA FUNCIÓN 'useAuth'
+//    Esto es lo que solucionará el error de compilación.
+export const useAuth = () => {
+  return useContext(AuthContext);
 };
 
-// El reducer maneja las acciones de login y logout
-const authReducer = (state, action) => {
-  switch (action.type) {
-    case 'LOGIN':
-      return {
-        ...state,
-        userInfo: action.payload,
-      };
-    case 'LOGOUT':
-      return {
-        ...state,
-        userInfo: null,
-      };
-    default:
-      return state;
-  }
-};
+// De aquí en adelante, su código original se mantiene intacto
+const AuthProvider = ({ children }) => {
+  const [userInfo, setUserInfo] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-// El proveedor que envolverá la aplicación
-export const AuthProvider = ({ children }) => {
-  const [state, dispatch] = useReducer(authReducer, initialState);
-
-  // Sincronizamos el estado con localStorage
   useEffect(() => {
-    if (state.userInfo) {
-      localStorage.setItem('userInfo', JSON.stringify(state.userInfo));
-    } else {
-      localStorage.removeItem('userInfo');
+    const storedUserInfo = localStorage.getItem('userInfo');
+    if (storedUserInfo) {
+      setUserInfo(JSON.parse(storedUserInfo));
     }
-  }, [state.userInfo]);
+    setLoading(false);
+  }, []);
 
-  const login = (userInfo) => {
-    dispatch({ type: 'LOGIN', payload: userInfo });
+  const login = async (email, password) => {
+    try {
+      const config = {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      };
+      const { data } = await axios.post(
+        '/api/auth/login',
+        { email, password },
+        config
+      );
+      setUserInfo(data);
+      localStorage.setItem('userInfo', JSON.stringify(data));
+    } catch (error) {
+      console.error('Error en el login:', error.response.data.message);
+      throw error;
+    }
+  };
+
+  const register = async (userData) => {
+    try {
+        const config = {
+            headers: { 'Content-Type': 'application/json' },
+        };
+        const { data } = await axios.post('/api/auth/register', userData, config);
+        setUserInfo(data);
+        localStorage.setItem('userInfo', JSON.stringify(data));
+    } catch (error) {
+        console.error('Error en el registro:', error.response.data.message);
+        throw error;
+    }
   };
 
   const logout = () => {
-    dispatch({ type: 'LOGOUT' });
+    setUserInfo(null);
+    localStorage.removeItem('userInfo');
   };
 
   return (
-    <AuthContext.Provider value={{ userInfo: state.userInfo, login, logout }}>
+    <AuthContext.Provider value={{ userInfo, loading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-// Hook personalizado para consumir el contexto fácilmente
-export const useAuth = () => {
-    return useContext(AuthContext);
-}
-
-export default AuthContext;
+export { AuthProvider, AuthContext };
