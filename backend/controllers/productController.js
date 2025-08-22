@@ -144,6 +144,21 @@ const reportProduct = asyncHandler(async (req, res) => {
   res.status(201).json(updated);
 });
 
+// GET /api/products/top?limit=12  (público)
+const listTopProducts = asyncHandler(async (req, res) => {
+  const limit = Number(req.query.limit) || 12;
+  const items = await Product.find({ deshabilitado: { $ne: true } })
+    .sort({ soldCount: -1, createdAt: -1 })
+    .limit(limit);
+  res.json({ items });
+});
+
+module.exports = {
+  listTopProducts,
+};
+
+
+
 module.exports = {
   getProducts,
   getProductById,
@@ -152,5 +167,6 @@ module.exports = {
   deleteProduct,
   getMyProducts,
   createProductReview,
-  reportProduct,              // <-- exportado
+  reportProduct,    
+  listTopProducts,           // <-- exportado
 };

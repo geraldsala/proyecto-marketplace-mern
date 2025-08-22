@@ -10,30 +10,48 @@ const {
   deleteProduct,
   getMyProducts,
   createProductReview,
-  reportProduct,            // <-- importado
+  reportProduct,
+  listTopProducts, // 👈 añadida
 } = require('../controllers/productController.js');
 
 const { protect, authorize } = require('../middlewares/authMiddleware.js');
 
-// pública / crear
+// --- RUTA PÚBLICA ESPECIAL ---
+// ⚠️ importante: declarar /top antes de /:id para que no lo “sombree”
+router.get('/top', listTopProducts);
+
+// --- COLECCIÓN ---
+// GET /api/products   → listado público
+// POST /api/products  → crear (solo tienda/admin)
 router
   .route('/')
   .get(getProducts)
   .post(protect, authorize('tienda', 'admin'), createProduct);
 
-// específicas (antes de :id)
-router.route('/myproducts').get(protect, authorize('tienda'), getMyProducts);
+// --- SUBRUTAS ESPECÍFICAS (antes de /:id) ---
+// GET /api/products/myproducts → productos de la tienda actual
+router.get('/myproducts', protect, authorize('tienda'), getMyProducts);
 
-// ⚠️ Subrutas primero (para que no las sombreen)
-router
-  .route('/:id/reviews')
-  .post(protect, authorize('comprador', 'tienda', 'admin'), createProductReview);
+// POST /api/products/:id/reviews → crear review
+router.post(
+  '/:id/reviews',
+  protect,
+  authorize('comprador', 'tienda', 'admin'),
+  createProductReview
+);
 
-router
-  .route('/:id/report')
-  .post(protect, authorize('comprador', 'tienda', 'admin'), reportProduct);
+// POST /api/products/:id/report → reportar producto
+router.post(
+  '/:id/report',
+  protect,
+  authorize('comprador', 'tienda', 'admin'),
+  reportProduct
+);
 
-// por id
+// --- POR ID (detalle / update / delete) ---
+// GET /api/products/:id
+// PUT /api/products/:id
+// DELETE /api/products/:id
 router
   .route('/:id')
   .get(getProductById)
@@ -41,3 +59,4 @@ router
   .delete(protect, authorize('tienda', 'admin'), deleteProduct);
 
 module.exports = router;
+
