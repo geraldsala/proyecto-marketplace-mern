@@ -10,6 +10,7 @@ const {
   deleteProduct,
   getMyProducts,
   createProductReview,
+  reportProduct,            // <-- importado
 } = require('../controllers/productController.js');
 
 const { protect, authorize } = require('../middlewares/authMiddleware.js');
@@ -23,10 +24,14 @@ router
 // específicas (antes de :id)
 router.route('/myproducts').get(protect, authorize('tienda'), getMyProducts);
 
-// ⚠️ RESEÑAS PRIMERO para que nada las “sombree”
+// ⚠️ Subrutas primero (para que no las sombreen)
 router
   .route('/:id/reviews')
   .post(protect, authorize('comprador', 'tienda', 'admin'), createProductReview);
+
+router
+  .route('/:id/report')
+  .post(protect, authorize('comprador', 'tienda', 'admin'), reportProduct);
 
 // por id
 router

@@ -56,15 +56,16 @@ function looksLikeObjectId(str) {
 function capitalize(s) {
   return String(s).charAt(0).toUpperCase() + String(s).slice(1);
 }
-function slugish(s) {
-  return String(s || '').toLowerCase().trim().replace(/\s+/g, '_');
-}
-function singularize(s) {
-  const t = String(s || '').toLowerCase().trim();
-  if (t.endsWith('es')) return t.slice(0, -2);
-  if (t.endsWith('s')) return t.slice(0, -1);
-  return t;
-}
+
+const REPORT_CATEGORIES = [
+  'Producto falsificado',
+  'Descripción engañosa',
+  'Precio fraudulento',
+  'Contenido inapropiado',
+  'Producto peligroso/dañado',
+  'Spam o duplicado',
+  'Otra',
+];
 
 const ProductPage = () => {
   const { id: productId } = useParams();
@@ -79,7 +80,6 @@ const ProductPage = () => {
   const [qty, setQty] = useState(1);
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
-  const [showReportModal, setShowReportModal] = useState(false);
 
   // galería
   const [sel, setSel] = useState(0);
@@ -87,7 +87,13 @@ const ProductPage = () => {
   // reseñas (UI)
   const [myRate, setMyRate] = useState(0);
   const [coment, setComent] = useState('');
-  const [reviews, setReviews] = useState([]); // viene de product.reviews
+  const [reviews, setReviews] = useState([]);
+
+  // reportes (UI)
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportCategory, setReportCategory] = useState(REPORT_CATEGORIES[0]);
+  const [reportDetail, setReportDetail] = useState('');
+  const [reportSending, setReportSending] = useState(false);
 
   // tienda mostrada
   const [resolvedStoreName, setResolvedStoreName] = useState('');
@@ -100,7 +106,7 @@ const ProductPage = () => {
       try {
         const data = await productService.getProductById(productId);
         setProduct(data);
-        setReviews(data?.reviews || []);
+        setReviews(data?.reviews || data?.calificaciones || []);
         setError('');
       } catch (err) {
         console.error(err);
@@ -155,14 +161,14 @@ const ProductPage = () => {
     }
 
     const inlineName =
-      product.storeName || product.tiendaNombre || product.nombreTienda || '';
+      product?.storeName || product?.tiendaNombre || product?.nombreTienda || '';
     if (inlineName && !looksLikeObjectId(inlineName)) {
       setResolvedStoreName(inlineName);
       return;
     }
 
     const tiendaId = typeof product.tienda === 'string' ? product.tienda : '';
-    if (looksLikeObjectId(tiendaId) && userService && typeof userService.getStorePublic === 'function') {
+    if (looksLikeObjectId(tiendaId) && userService?.getStorePublic) {
       (async () => {
         try {
           const store = await userService.getStorePublic(tiendaId);
@@ -181,20 +187,7 @@ const ProductPage = () => {
     setResolvedStoreName(inlineName || 'La Tienda de Tecnología');
   }, [product]);
 
-  // categoría (si te sirve a futuro)
-  const categoryKey = useMemo(() => {
-    const raw =
-      product?.categoria ??
-      product?.categoría ??
-      product?.category ??
-      product?.tipo ??
-      product?.seccion ??
-      product?.sección ??
-      '';
-    return String(raw).toLowerCase().trim();
-  }, [product]);
-
-  // rating mostrado: **usa los campos del producto**
+  // rating mostrado
   const productRating = Number(product?.calificacionPromedio || 0);
   const productRatingCount = Number(product?.numCalificaciones || 0);
 
@@ -222,21 +215,21 @@ const ProductPage = () => {
     }
 
     const known = [
-      ['Modelo', product.modelo],
-      ['Procesador', product.procesador || product.cpu],
-      ['RAM', product.ram || product.memoria],
-      ['Almacenamiento', product.almacenamiento || product.storage],
-      ['Pantalla', product.pantalla || product.display],
-      ['Gráficos', product.graficos || product.gpu],
-      ['Batería', product.bateria],
-      ['Sistema Operativo', product.so || product.sistemaOperativo],
-      ['Compatibilidad', product.compatibilidad],
-      ['Peso', product.peso],
-      ['Dimensiones', product.dimensiones],
-      ['Color', product.color],
-      ['Conectividad', product.conectividad],
-      ['Cámara', product.camara],
-      ['Puertos', product.puertos],
+      ['Modelo', product?.modelo],
+      ['Procesador', product?.procesador || product?.cpu],
+      ['RAM', product?.ram || product?.memoria],
+      ['Almacenamiento', product?.almacenamiento || product?.storage],
+      ['Pantalla', product?.pantalla || product?.display],
+      ['Gráficos', product?.graficos || product?.gpu],
+      ['Batería', product?.bateria],
+      ['Sistema Operativo', product?.so || product?.sistemaOperativo],
+      ['Compatibilidad', product?.compatibilidad],
+      ['Peso', product?.peso],
+      ['Dimensiones', product?.dimensiones],
+      ['Color', product?.color],
+      ['Conectividad', product?.conectividad],
+      ['Cámara', product?.camara],
+      ['Puertos', product?.puertos],
     ];
     return known
       .filter(([, v]) => v !== null && v !== undefined && String(v).trim() !== '')
@@ -275,18 +268,48 @@ const ProductPage = () => {
         comment: coment,
       });
       setProduct(updated);
-      setReviews(updated?.reviews || []);
+      setReviews(updated?.reviews || updated?.calificaciones || []);
       setComent('');
       setMyRate(0);
-      // opcional: scroll a la sección de reseñas
     } catch (err) {
       const msg =
-      err?.response?.data?.message ||
-      err?.response?.data?.error ||
-      err?.message ||
-      'No se pudo guardar la reseña.';
-    console.error('Error addReview:', err?.response || err);
-    alert(msg);
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        'No se pudo guardar la reseña.';
+      console.error('Error addReview:', err?.response || err);
+      alert(msg);
+    }
+  };
+
+  // ENVIAR REPORTE -> incrementa contador y puede inhabilitar
+  const enviarReporte = async () => {
+    if (!userInfo) return navigate('/login');
+    setReportSending(true);
+    try {
+      const updated = await productService.reportProduct(product._id, {
+        category: reportCategory,
+        detail: reportDetail,
+      });
+      setProduct(updated);
+      setShowReportModal(false);
+      setReportCategory(REPORT_CATEGORIES[0]);
+      setReportDetail('');
+      alert(
+        updated?.deshabilitado
+          ? 'Gracias. El producto ha sido inhabilitado por múltiples reportes.'
+          : 'Gracias. Tu reporte ha sido recibido.'
+      );
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        'No se pudo enviar el reporte.';
+      console.error('Error reportProduct:', err?.response || err);
+      alert(msg);
+    } finally {
+      setReportSending(false);
     }
   };
 
@@ -324,6 +347,7 @@ const ProductPage = () => {
                     alt={product.nombre}
                   />
                   {!product.stock && <span className="badge-stock">SIN STOCK</span>}
+                  {product.deshabilitado && <span className="badge-stock">INHABILITADO</span>}
                 </div>
 
                 {Array.isArray(product.imagenes) && product.imagenes.length > 1 && (
@@ -375,6 +399,13 @@ const ProductPage = () => {
                   </small>
                 </div>
 
+                {/* Banner de inhabilitado */}
+                {product.deshabilitado && (
+                  <Alert variant="warning" className="py-2">
+                    Este producto ha sido inhabilitado temporalmente debido a múltiples reportes.
+                  </Alert>
+                )}
+
                 {/* Envío */}
                 {(product.tiempoEnvio || product.costoEnvio) && (
                   <div className="shipping mt-1">
@@ -414,6 +445,7 @@ const ProductPage = () => {
                         max={Math.max(1, product.stock || 1)}
                         value={qty}
                         onChange={(e) => setQty(Number(e.target.value) || 1)}
+                        disabled={product.deshabilitado}
                       />
                     </Form.Group>
                   </Col>
@@ -423,6 +455,7 @@ const ProductPage = () => {
                         variant="outline-secondary"
                         onClick={wishlistHandler}
                         className="flex-grow-1"
+                        disabled={product.deshabilitado}
                       >
                         <FontAwesomeIcon
                           icon={isInWishlist ? faHeartSolid : faHeartRegular}
@@ -443,7 +476,7 @@ const ProductPage = () => {
                       <Button
                         className="btn-addcart flex-grow-1"
                         onClick={addToCartHandler}
-                        disabled={!product.stock}
+                        disabled={!product.stock || product.deshabilitado}
                       >
                         <FontAwesomeIcon icon={faCartPlus} className="me-2" />
                         Añadir
@@ -469,7 +502,9 @@ const ProductPage = () => {
                     />
                   )}
                   <span className="text-muted">Vendido por:</span>
-                  <strong className="ms-2">{looksLikeObjectId(resolvedStoreName) ? 'Tienda' : resolvedStoreName}</strong>
+                  <strong className="ms-2">
+                    {looksLikeObjectId(resolvedStoreName) ? 'Tienda' : resolvedStoreName}
+                  </strong>
                 </div>
               </div>
 
@@ -494,9 +529,12 @@ const ProductPage = () => {
                   placeholder="Escribe tu comentario…"
                   value={coment}
                   onChange={(e) => setComent(e.target.value)}
+                  disabled={product.deshabilitado}
                 />
                 <div className="d-grid mt-2">
-                  <Button onClick={publicarResena}>Publicar reseña</Button>
+                  <Button onClick={publicarResena} disabled={product.deshabilitado}>
+                    Publicar reseña
+                  </Button>
                 </div>
 
                 {reviews.length > 0 && (
@@ -535,12 +573,42 @@ const ProductPage = () => {
             <Modal.Header closeButton>
               <Modal.Title>Reportar producto</Modal.Title>
             </Modal.Header>
-            <Modal.Body className="text-muted">
-              Describe brevemente el problema con este producto.
+            <Modal.Body>
+              <Form.Group className="mb-3">
+                <Form.Label>Categoría del reporte</Form.Label>
+                <Form.Select
+                  value={reportCategory}
+                  onChange={(e) => setReportCategory(e.target.value)}
+                >
+                  {REPORT_CATEGORIES.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+              <Form.Group>
+                <Form.Label>Detalle (opcional)</Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={3}
+                  placeholder="Describe brevemente el problema…"
+                  value={reportDetail}
+                  onChange={(e) => setReportDetail(e.target.value)}
+                />
+              </Form.Group>
+              <small className="text-muted d-block mt-2">
+                Nota: tu reporte ayuda a mantener el marketplace seguro. Solo se registra el conteo de reportes.
+              </small>
             </Modal.Body>
             <Modal.Footer>
               <Button variant="secondary" onClick={() => setShowReportModal(false)}>
-                Cerrar
+                Cancelar
+              </Button>
+              <Button
+                variant="danger"
+                onClick={enviarReporte}
+                disabled={reportSending}
+              >
+                {reportSending ? 'Enviando…' : 'Enviar reporte'}
               </Button>
             </Modal.Footer>
           </Modal>

@@ -114,6 +114,36 @@ const createProductReview = asyncHandler(async (req, res) => {
   res.status(201).json(updated); // incluye virtual "reviews"
 });
 
+/** POST /api/products/:id/report  (incrementa reportes; inhabilita al llegar a 10) */
+const reportProduct = asyncHandler(async (req, res) => {
+  console.log('POST /api/products/:id/report', {
+    id: req.params.id,
+    user: req.user && { id: req.user._id, role: req.user.role },
+  });
+
+  const product = await Product.findById(req.params.id);
+  if (!product) {
+    res.status(404);
+    throw new Error('Producto no encontrado');
+  }
+
+  // Solo contamos; no guardamos categoría ni detalle
+  product.reportes = (product.reportes || 0) + 1;
+
+  // Inhabilitar al llegar a 10
+  if (product.reportes >= 10) {
+    product.deshabilitado = true;
+  }
+
+  await product.save();
+
+  const updated = await Product.findById(product._id)
+    .populate('tienda', 'nombre nombreTienda storeName fotoLogo logo logoURL email');
+
+  console.log('Reporte OK -> reportes:', updated.reportes, 'deshabilitado:', updated.deshabilitado);
+  res.status(201).json(updated);
+});
+
 module.exports = {
   getProducts,
   getProductById,
@@ -122,4 +152,5 @@ module.exports = {
   deleteProduct,
   getMyProducts,
   createProductReview,
+  reportProduct,              // <-- exportado
 };

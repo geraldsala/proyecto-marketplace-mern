@@ -39,6 +39,31 @@ const addReview = async (id, { rating, comment }) => {
   return data; // producto actualizado
 };
 
+// ===== Reportes =====
+const reportProduct = async (id, { category, detail }) => {
+  // En backend solo se incrementa el contador; enviamos category/detail por si en el futuro los usas
+  let headers = {
+    'Content-Type': 'application/json',
+    'Cache-Control': 'no-cache',
+    Pragma: 'no-cache',
+    Expires: '0',
+  };
+  try {
+    const raw = localStorage.getItem('userInfo');
+    if (raw) {
+      const { token } = JSON.parse(raw) || {};
+      if (token) headers.Authorization = `Bearer ${token}`;
+    }
+  } catch {}
+
+  const { data } = await api.post(
+    `/api/products/${id}/report`,
+    { category, detail },
+    { headers }
+  );
+  return data; // producto actualizado
+};
+
 // ===== Wishlist =====
 const isInWishlist = async (productId) => {
   const { data } = await api.get(`/api/users/wishlist/${productId}/status`);
@@ -80,7 +105,8 @@ const createProduct = async () => {
 export default {
   getProducts,
   getProductById,
-  addReview, // <-- importante
+  addReview,          // <-- reseñas
+  reportProduct,      // <-- NUEVO: reportes
   isInWishlist,
   addToWishlist,
   removeFromWishlist,
