@@ -75,6 +75,12 @@ const isInWishlist = async (productId) => {
   return data.inWishlist; // Devuelve true o false
 };
 
+// --- OBTENER TIENDA PÚBLICA ---
+const getStorePublicProfile = async (storeId) => {
+  const { data } = await api.get(`${API_URL}/store/${storeId}`);
+  return data;
+};
+
 // --- Suscripciones a Tiendas ---
 const getMySubscriptions = async () => {
   // Corregido: apunta a la nueva ruta GET que creamos
@@ -114,6 +120,7 @@ export default {
   addToWishlist,
   removeFromWishlist,
   isInWishlist,
+  getStorePublicProfile,
   getMySubscriptions,
   toggleSubscription,
   getUsers,

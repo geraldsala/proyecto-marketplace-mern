@@ -361,6 +361,45 @@ module.exports = {
 };
 
 
+/**
+ * @desc    Obtener el perfil público de una tienda y sus productos
+ * @route   GET /api/users/store/:id
+ * @access  Public
+ */
+const getStorePublicProfile = asyncHandler(async (req, res) => {
+  // Buscamos a la tienda por su ID
+  const store = await User.findById(req.params.id).select('-password -wishlist -subscriptions -subscribers');
+
+  if (store && store.tipoUsuario === 'tienda') {
+    // Si la encontramos y es una tienda, buscamos sus productos activos
+    const products = await Product.find({ 
+      tienda: req.params.id,
+      deshabilitado: { $ne: true } // Excluimos productos inhabilitados
+    });
+
+    res.json({
+      store,
+      products
+    });
+
+  } else {
+    res.status(404);
+    throw new Error('Tienda no encontrada');
+  }
+});
+
+
+module.exports = {
+  // ... (tus otras exportaciones)
+  toggleSubscription,
+  getSubscriptions,
+  // --- AÑADE ESTA LÍNEA AL FINAL ---
+  getStorePublicProfile,
+};
+
+
+
+
 module.exports = {
   authUser,
   registerUser,
@@ -376,4 +415,5 @@ module.exports = {
   checkWishlistStatus,
   toggleSubscription,
   getSubscriptions,
+  getStorePublicProfile,
 };

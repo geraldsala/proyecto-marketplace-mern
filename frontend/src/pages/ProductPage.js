@@ -332,6 +332,8 @@ const subscriptionHandler = async () => {
 
   const storeName = resolvedStoreName || 'La Tienda de Tecnología';
   const storeLogo = resolvedStoreLogo || '';
+  const storeId = product?.tienda?._id || (typeof product?.tienda === 'string' ? product.tienda : null);
+
 
   return (
     <Container className="py-4 detalleslap">
@@ -519,11 +521,16 @@ const subscriptionHandler = async () => {
                     />
                   )}
                   <span className="text-muted">Vendido por:</span>
-                  <strong className="ms-2">
-                    {looksLikeObjectId(resolvedStoreName) ? 'Tienda' : resolvedStoreName}
-                  </strong>
 
-                            {/* ===== AÑADE ESTE BOTÓN AQUÍ ===== */}
+                  {/* --- INICIO DEL CAMBIO --- */}
+                  {/* Hacemos que el nombre de la tienda sea un enlace clickeable */}
+                  <Link to={`/tienda/${storeId}`} className="text-decoration-none">
+                    <strong className="ms-2">
+                      {looksLikeObjectId(resolvedStoreName) ? 'Tienda' : resolvedStoreName}
+                    </strong>
+                  </Link>
+                  {/* --- FIN DEL CAMBIO --- */}
+
                   {userInfo && userInfo.tipoUsuario === 'comprador' && product.tienda && (
                     <Button
                       variant={isSubscribed ? 'primary' : 'outline-primary'}

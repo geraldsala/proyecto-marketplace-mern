@@ -27,6 +27,7 @@ import Smart from './pages/smart';
 import NewsletterPopup from './components/NewsletterPopup';
 import CheckoutPage from './pages/CheckoutPage';
 import OrderPage from './pages/OrderPage';
+import StorePage from './pages/StorePage';
 
 function App() {
   return (
@@ -56,6 +57,7 @@ function App() {
             <Route path="/cart" element={<CartPage />} />
             <Route path='/checkout' element={<CheckoutPage />} />
             <Route path="/order/:id" element={<OrderPage />} />
+            <Route path='/tienda/:id' element={<StorePage />} />
 
           </Routes>
         </Container>
