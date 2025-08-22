@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Container, Row, Col, Image, ListGroup, Card, Button, Spinner, Alert, Form, Modal } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHeart as faHeartSolid } from '@fortawesome/free-solid-svg-icons';
+import { faHeart as faHeartSolid, faStore } from '@fortawesome/free-solid-svg-icons';
 import { faHeart as faHeartRegular } from '@fortawesome/free-regular-svg-icons';
 import productService from '../services/productService';
 import { useCart } from '../context/CartContext';
@@ -15,12 +15,14 @@ const ProductPage = () => {
   const [qty, setQty] = useState(1);
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false); // suscripción a la tienda
 
   const { id: productId } = useParams();
   const { addToCart } = useCart();
   const { userInfo } = useAuth();
   const navigate = useNavigate();
 
+  // Carga del producto
   useEffect(() => {
     const fetchProduct = async () => {
       setLoading(true);
@@ -36,20 +38,34 @@ const ProductPage = () => {
     fetchProduct();
   }, [productId]);
 
-  // --- CORRECCIÓN 1: useEffect para verificar la wishlist de forma más eficiente ---
+  // Verifica wishlist y suscripción a la tienda (con storeId normalizado)
   useEffect(() => {
-    const checkWishlistStatus = async () => {
+    const checkStatus = async () => {
       if (userInfo && product) {
         try {
-          // Usamos la función específica para esto, si existe en tu servicio
-          const status = await productService.isInWishlist(product._id);
-          setIsInWishlist(status);
-        } catch (wishlistError) {
-          console.error("Error al verificar la wishlist", wishlistError);
+          const [wishlistStatus, subscriptions] = await Promise.all([
+            productService.isInWishlist(product._id),
+            productService.getMySubscriptions(),
+          ]);
+
+          setIsInWishlist(wishlistStatus);
+
+          if (product.tienda) {
+            const productStoreId =
+              typeof product.tienda === 'string' ? product.tienda : product.tienda?._id;
+
+            const isAlreadySubscribed = subscriptions.some(
+              (store) => String(store._id) === String(productStoreId)
+            );
+
+            setIsSubscribed(isAlreadySubscribed);
+          }
+        } catch (err) {
+          console.error('Error al verificar estados (wishlist/suscripción)', err);
         }
       }
     };
-    checkWishlistStatus();
+    checkStatus();
   }, [product, userInfo]);
 
   const addToCartHandler = () => {
@@ -57,92 +73,192 @@ const ProductPage = () => {
     navigate('/cart');
   };
 
-  // --- CORRECCIÓN 2: Lógica correcta para agregar o quitar de la wishlist ---
   const wishlistHandler = async () => {
-    if (!userInfo) {
-      navigate('/login');
-      return;
-    }
+    if (!userInfo) return navigate('/login');
     try {
       if (isInWishlist) {
         await productService.removeFromWishlist(product._id);
       } else {
         await productService.addToWishlist(product._id);
       }
-      setIsInWishlist(!isInWishlist); // Actualizamos el estado visualmente
+      setIsInWishlist(!isInWishlist);
     } catch (err) {
       alert('No se pudo actualizar la wishlist.');
       console.error(err);
     }
   };
 
+  // Toggle suscripción con storeId robusto
+  const handleSubscribeToggle = async () => {
+    if (!userInfo) return navigate('/login');
+    try {
+      const storeId =
+        typeof product.tienda === 'string' ? product.tienda : product.tienda?._id;
+      if (!storeId) {
+        throw new Error('No se encontró el ID de la tienda en el producto.');
+      }
+      await productService.toggleSubscription(storeId);
+      setIsSubscribed(!isSubscribed);
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message ||
+        err.message ||
+        'No se pudo actualizar la suscripción a la tienda.';
+      alert(msg);
+      console.error(err);
+    }
+  };
+
   const reportHandler = () => {
-    console.log("Reporte enviado");
+    console.log('Reporte enviado');
     setShowReportModal(false);
   };
 
-  if (loading) return <Container className="text-center py-5"><Spinner animation="border" /></Container>;
-  if (error) return <Container className="py-5"><Alert variant="danger">{error}</Alert></Container>;
+  if (loading) {
+    return (
+      <Container className="text-center py-5">
+        <Spinner animation="border" />
+      </Container>
+    );
+  }
+
+  if (error) {
+    return (
+      <Container className="py-5">
+        <Alert variant="danger">{error}</Alert>
+      </Container>
+    );
+  }
+
+  // Valores seguros para el bloque "Vendido por"
+  const storeName =
+    product && product.tienda && typeof product.tienda !== 'string'
+      ? product.tienda?.nombreTienda || 'Tienda'
+      : 'Tienda';
+
+  const storeLogo =
+    product && product.tienda && typeof product.tienda !== 'string'
+      ? product.tienda?.fotoLogo
+      : null;
 
   return (
     <Container className="py-4">
       <Link className="btn btn-light my-3" to={-1}>
         Volver
       </Link>
+
       {product && (
         <>
           <Row>
-            {/* Columna de Imagen */}
             <Col md={6} className="mb-3">
               <Image src={product.imagenes?.[0]} alt={product.nombre} fluid />
             </Col>
 
-            {/* Columna de Info Principal */}
             <Col md={3} className="mb-3">
               <ListGroup variant="flush">
-                <ListGroup.Item><h3>{product.nombre}</h3></ListGroup.Item>
-                <ListGroup.Item>Precio: ₡{product.precio?.toLocaleString('es-CR')}</ListGroup.Item>
+                <ListGroup.Item>
+                  <h3>{product.nombre}</h3>
+                </ListGroup.Item>
+                <ListGroup.Item>
+                  Precio: ₡{product.precio?.toLocaleString('es-CR')}
+                </ListGroup.Item>
                 <ListGroup.Item>Descripción: {product.descripcion}</ListGroup.Item>
+
+                {/* Vendido por + botón de suscripción */}
+                {product.tienda && (
+                  <ListGroup.Item>
+                    <strong>Vendido por:</strong>
+                    <div className="d-flex align-items-center mt-2 mb-2">
+                      {storeLogo && (
+                        <Image
+                          src={storeLogo}
+                          alt={storeName}
+                          roundedCircle
+                          style={{ width: '40px', height: '40px', marginRight: '10px' }}
+                        />
+                      )}
+                      <span>{storeName}</span>
+                    </div>
+
+                    {userInfo && userInfo.tipoUsuario === 'comprador' && (
+                      <Button
+                        variant={isSubscribed ? 'outline-secondary' : 'outline-primary'}
+                        size="sm"
+                        className="w-100"
+                        onClick={handleSubscribeToggle}
+                      >
+                        <FontAwesomeIcon icon={faStore} className="me-2" />
+                        {isSubscribed ? 'Dejar de Seguir' : 'Seguir Tienda'}
+                      </Button>
+                    )}
+                  </ListGroup.Item>
+                )}
               </ListGroup>
             </Col>
 
-            {/* Columna de Acciones (Carrito, etc.) */}
             <Col md={3} className="mb-3">
               <Card>
                 <ListGroup variant="flush">
                   <ListGroup.Item>
-                    <Row><Col>Precio:</Col><Col><strong>₡{product.precio?.toLocaleString('es-CR')}</strong></Col></Row>
+                    <Row>
+                      <Col>Precio:</Col>
+                      <Col>
+                        <strong>₡{product.precio?.toLocaleString('es-CR')}</strong>
+                      </Col>
+                    </Row>
                   </ListGroup.Item>
+
                   <ListGroup.Item>
-                    <Row><Col>Estado:</Col><Col>{product.stock > 0 ? 'En Stock' : 'Agotado'}</Col></Row>
+                    <Row>
+                      <Col>Estado:</Col>
+                      <Col>{product.stock > 0 ? 'En Stock' : 'Agotado'}</Col>
+                    </Row>
                   </ListGroup.Item>
+
                   {product.stock > 0 && (
                     <ListGroup.Item>
                       <Row>
                         <Col>Cantidad:</Col>
                         <Col>
-                          <Form.Control as="select" value={qty} onChange={(e) => setQty(e.target.value)}>
+                          <Form.Control
+                            as="select"
+                            value={qty}
+                            onChange={(e) => setQty(e.target.value)}
+                          >
                             {[...Array(product.stock).keys()].map((x) => (
-                              <option key={x + 1} value={x + 1}>{x + 1}</option>
+                              <option key={x + 1} value={x + 1}>
+                                {x + 1}
+                              </option>
                             ))}
                           </Form.Control>
                         </Col>
                       </Row>
                     </ListGroup.Item>
                   )}
+
                   <ListGroup.Item className="d-grid">
-                    <Button onClick={addToCartHandler} variant="dark" type="button" disabled={product.stock === 0}>
+                    <Button
+                      onClick={addToCartHandler}
+                      variant="dark"
+                      type="button"
+                      disabled={product.stock === 0}
+                    >
                       Agregar al Carrito
                     </Button>
                   </ListGroup.Item>
+
                   <ListGroup.Item className="d-flex justify-content-center align-items-center">
                     <Button variant="link" onClick={wishlistHandler} className="text-danger">
-                      <FontAwesomeIcon icon={isInWishlist ? faHeartSolid : faHeartRegular} className="me-2" />
+                      <FontAwesomeIcon
+                        icon={isInWishlist ? faHeartSolid : faHeartRegular}
+                        className="me-2"
+                      />
                       {isInWishlist ? 'En mi Wishlist' : 'Añadir a Wishlist'}
                     </Button>
                   </ListGroup.Item>
                 </ListGroup>
               </Card>
+
               <div className="text-center mt-3">
                 <Button variant="link" size="sm" onClick={() => setShowReportModal(true)}>
                   Reportar producto
@@ -151,36 +267,23 @@ const ProductPage = () => {
             </Col>
           </Row>
 
-          <Modal show={showReportModal} onHide={() => setShowReportModal(false)}>
+          {/* Modal de reporte (opcional, si lo implementas) */}
+          {/* <Modal show={showReportModal} onHide={() => setShowReportModal(false)} centered>
             <Modal.Header closeButton>
-              <Modal.Title>Reportar Producto</Modal.Title>
+              <Modal.Title>Reportar producto</Modal.Title>
             </Modal.Header>
             <Modal.Body>
-              <Form>
-                <Form.Group className="mb-3" controlId="reportReason">
-                  <Form.Label>Motivo del reporte</Form.Label>
-                  <Form.Select>
-                    <option>Información incorrecta</option>
-                    <option>Producto fraudulento</option>
-                    <option>Contenido inapropiado</option>
-                    <option>Otro</option>
-                  </Form.Select>
-                </Form.Group>
-                <Form.Group className="mb-3" controlId="reportComment">
-                  <Form.Label>Comentarios adicionales</Form.Label>
-                  <Form.Control as="textarea" rows={3} placeholder="Describa el problema..." />
-                </Form.Group>
-              </Form>
+              // ...tu formulario de reporte...
             </Modal.Body>
             <Modal.Footer>
               <Button variant="secondary" onClick={() => setShowReportModal(false)}>
                 Cancelar
               </Button>
               <Button variant="primary" onClick={reportHandler}>
-                Enviar Reporte
+                Enviar reporte
               </Button>
             </Modal.Footer>
-          </Modal>
+          </Modal> */}
         </>
       )}
     </Container>

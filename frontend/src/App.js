@@ -25,6 +25,8 @@ import Audio from './pages/audio';
 import Celulares from './pages/celulares';
 import Smart from './pages/smart';
 
+import NewsletterPopup from './components/NewsletterPopup'; 
+
 function App() {
   return (
     <>
@@ -60,6 +62,7 @@ function App() {
 
       <ContactMenu />
       <ScrollToTopButton />
+      <NewsletterPopup />
       <Footer />
     </>
   );

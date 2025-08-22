@@ -8,7 +8,8 @@ const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
 const userRoutes = require('./routes/userRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
-const storeSubscriptionRoutes = require('./routes/storeSubscriptionRoutes'); // <-- AÑADIDO
+const storeSubscriptionRoutes = require('./routes/storeSubscriptionRoutes');
+const subscribeRoutes = require('./routes/subscribeRoutes'); // <-- ASEGÚRATE DE QUE ESTA LÍNEA ESTÉ
 
 const { notFound, errorHandler } = require('./middlewares/errorMiddleware.js');
 
@@ -24,7 +25,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/categories', categoryRoutes);
-app.use('/api/storesubscriptions', storeSubscriptionRoutes); // <-- AÑADIDO
+app.use('/api/storesubscriptions', storeSubscriptionRoutes);
+app.use('/api/subscribe', subscribeRoutes); // 
 
 app.get('/', (req, res) => {
   res.send('API está corriendo...');

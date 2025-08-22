@@ -1,9 +1,9 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:5000/api';
-
+// --- CONFIGURACIÓN CLAVE ---
+// Creamos una instancia de axios que SIEMPRE apuntará a nuestro backend.
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: 'http://localhost:5000/api', // <-- LA LÍNEA MÁS IMPORTANTE
 });
 
 // Interceptor para añadir el token de autenticación a todas las peticiones
@@ -14,97 +14,57 @@ api.interceptors.request.use((config) => {
       config.headers.Authorization = `Bearer ${userInfo.token}`;
     }
   } catch (error) {
-    console.error("Error parsing user info from localStorage", error);
+    console.error("Error al procesar userInfo desde localStorage", error);
   }
   return config;
 });
 
 
-// === PRODUCTOS ===
+// --- SERVICIOS ---
 
-const getProducts = async () => {
-  const { data } = await api.get('/products');
-  return data;
-};
+// PRODUCTOS
+const getProducts = async () => { const { data } = await api.get('/products'); return data; };
+const getProductById = async (id) => { const { data } = await api.get(`/products/${id}`); return data; };
+const getMyProducts = async () => { const { data } = await api.get('/products/myproducts'); return data; };
+const createProduct = async () => { const { data } = await api.post('/products', {}); return data; };
+const updateProduct = async (id, productData) => { const { data } = await api.put(`/products/${id}`, productData); return data; };
+const deleteProduct = async (id) => { await api.delete(`/products/${id}`); };
 
-const getProductById = async (id) => {
-  const { data } = await api.get(`/products/${id}`);
-  return data;
-};
+// CATEGORÍAS
+const getCategories = async () => { const { data } = await api.get('/categories'); return data; };
 
-const getMyProducts = async () => {
-  const { data } = await api.get('/products/myproducts');
-  return data;
-};
-
-const createProduct = async () => {
-  // El backend crea un producto de ejemplo, por eso el body es vacío {}
-  const { data } = await api.post('/products', {});
-  return data;
-};
-
-const updateProduct = async (id, productData) => {
-  const { data } = await api.put(`/products/${id}`, productData);
-  return data;
-};
-
-const deleteProduct = async (id) => {
-  await api.delete(`/products/${id}`);
-};
-
-
-// === CATEGORÍAS ===
-
-const getCategories = async () => {
-    const { data } = await api.get('/categories');
-    return data;
-};
-
-
-// === WISHLIST ===
-
-const getWishlist = async () => {
-    const { data } = await api.get('/users/wishlist');
-    return data;
-};
-
-const addToWishlist = async (productId) => {
-    await api.post(`/users/wishlist/${productId}`);
-};
-
-const removeFromWishlist = async (productId) => {
-    await api.delete(`/users/wishlist/${productId}`);
-};
-
-// --- FUNCIÓN AÑADIDA Y OPTIMIZADA ---
-// Verifica si un producto específico ya está en la wishlist del usuario
+// WISHLIST
+const getWishlist = async () => { const { data } = await api.get('/users/wishlist'); return data; };
+const addToWishlist = async (productId) => { await api.post(`/users/wishlist/${productId}`); };
+const removeFromWishlist = async (productId) => { await api.delete(`/users/wishlist/${productId}`); };
 const isInWishlist = async (productId) => {
     try {
-        const wishlist = await getWishlist(); // Obtiene la wishlist actual
-        // El método .some() es eficiente: devuelve true si encuentra una coincidencia y se detiene.
+        const wishlist = await getWishlist();
         return wishlist.some(item => item._id === productId);
     } catch (error) {
-        console.error("Error checking wishlist status", error);
-        return false; // Asume que no está en la lista si hay un error
+        return false;
     }
+};
+
+// SUSCRIPCIONES A TIENDAS
+const toggleSubscription = async (storeId) => { await api.post('/storesubscriptions/toggle', { storeId }); };
+const getMySubscriptions = async () => { const { data } = await api.get('/storesubscriptions/mystores'); return data; };
+const getMySubscribers = async () => { const { data } = await api.get('/storesubscriptions/mysubscribers'); return data; };
+
+// --- AÑADIDO: Servicio para el pop-up de suscripción ---
+const subscribeToNewsletter = async (email) => {
+    // Usamos nuestra instancia 'api' para que la llamada vaya al puerto 5000
+    const { data } = await api.post('/subscribe', { email });
+    return data;
 };
 
 
 const productService = {
-  // Productos
-  getProducts,
-  getProductById,
-  getMyProducts,
-  createProduct,
-  updateProduct,
-  deleteProduct,
-  // Categorías
+  getProducts, getProductById, getMyProducts, createProduct, updateProduct, deleteProduct,
   getCategories,
-  // Wishlist
-  getWishlist,
-  addToWishlist,
-  removeFromWishlist,
-  isInWishlist, // <-- Asegúrate de que esté exportada
+  getWishlist, addToWishlist, removeFromWishlist, isInWishlist,
+  toggleSubscription, getMySubscriptions, getMySubscribers,
+  subscribeToNewsletter, // <-- Exportamos la nueva función
 };
 
 export default productService;
