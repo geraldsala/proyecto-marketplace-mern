@@ -3,6 +3,7 @@ const asyncHandler = require('express-async-handler');
 const User = require('../models/User.js');
 const generateToken = require('../utils/generateToken.js');
 const { luhnCheck } = require('../utils/validation.js');
+const Product = require('../models/Product.js');
 
 /**
  * @desc    Autenticar usuario y obtener token

@@ -13,7 +13,7 @@ import RegisterPage from './pages/RegisterPage';
 import AdminPage from './pages/AdminPage';
 import ProductPage from './pages/ProductPage';
 import ProfilePage from './pages/ProfilePage';
-import Wishlist from './pages/wishlist';
+import WishlistPage from './pages/WishlistPage';
 import ProductEditPage from './pages/ProductEditPage';
 import ContactMenu from './pages/ContactMenu';
 import ScrollToTopButton from './pages/ScrollToTopButton';
@@ -47,7 +47,7 @@ function App() {
             <Route path="/panel" element={<ProfilePage />} />
             <Route path="/tienda/producto/:id/edit" element={<ProductEditPage />} />
             <Route path="/admin" element={<AdminPage />} />
-            <Route path="/wishlist" element={<Wishlist />} />
+            <Route path="/wishlist" element={<WishlistPage />} />
             <Route path="/soporte" element={<ContactMenu />} />
             <Route path="/terminos" element={<TermsPage />} />
             <Route path="/search/:keyword" element={<SearchPage />} />
