@@ -25,6 +25,7 @@ import Audio from './pages/audio';
 import Celulares from './pages/celulares';
 import Smart from './pages/smart';
 import NewsletterPopup from './components/NewsletterPopup';
+import CheckoutPage from './pages/CheckoutPage';
 
 function App() {
   return (
@@ -52,6 +53,7 @@ function App() {
             <Route path="/terminos" element={<TermsPage />} />
             <Route path="/search/:keyword" element={<SearchPage />} />
             <Route path="/cart" element={<CartPage />} />
+            <Route path='/checkout' element={<CheckoutPage />} />
             {/* Puedes añadir una ruta "catch-all" para errores 404 si quieres */}
             {/* <Route path="*" element={<NotFoundPage />} /> */}
           </Routes>
