@@ -17,7 +17,8 @@ const {
   checkWishlistStatus,
   toggleSubscription, // 
   getSubscriptions, 
-  getStorePublicProfile,  // 
+  getStorePublicProfile, 
+  listPublicStores, // 
 } = require('../controllers/userController.js');
 
 const { protect, authorize } = require('../middlewares/authMiddleware.js');
@@ -59,5 +60,7 @@ router
   .post(protect, authorize('comprador'), toggleSubscription);
 
 router.route('/store/:id').get(getStorePublicProfile);
+
+router.route('/stores').get(listPublicStores); // público
 
 module.exports = router;

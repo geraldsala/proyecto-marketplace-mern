@@ -398,6 +398,42 @@ module.exports = {
 };
 
 
+/**
+ * @desc Listar tiendas públicas (alfabético) con búsqueda/paginación
+ * @route GET /api/users/stores?search=&page=&limit=
+ * @access Public
+ */
+const listPublicStores = asyncHandler(async (req, res) => {
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 20;
+  const skip = (page - 1) * limit;
+  const search = (req.query.search || '').trim();
+
+  const query = { tipoUsuario: 'tienda' };
+  if (search) {
+    query.$or = [
+      { nombreTienda: { $regex: search, $options: 'i' } },
+      { nombre: { $regex: search, $options: 'i' } },
+    ];
+  }
+
+  const [total, items] = await Promise.all([
+    User.countDocuments(query),
+    User.find(query)
+      .select('-password -wishlist -subscriptions -subscribers')
+      .sort({ nombreTienda: 1, nombre: 1 })
+      .skip(skip)
+      .limit(limit),
+  ]);
+
+  res.json({
+    items,
+    page,
+    pages: Math.ceil(total / limit) || 1,
+    total,
+  });
+});
+
 
 
 module.exports = {
@@ -416,4 +452,5 @@ module.exports = {
   toggleSubscription,
   getSubscriptions,
   getStorePublicProfile,
+  listPublicStores,
 };

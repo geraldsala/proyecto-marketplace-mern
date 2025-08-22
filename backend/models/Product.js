@@ -46,6 +46,9 @@ const productSchema = mongoose.Schema(
     calificacionPromedio: { type: Number, required: true, default: 0 },
     numCalificaciones: { type: Number, required: true, default: 0 },
 
+    // Métrica de ventas (para "más vendidos")
+    soldCount: { type: Number, default: 0, index: true },
+
     // Moderación
     reportes: { type: Number, default: 0 },
     deshabilitado: { type: Boolean, default: false },
@@ -62,6 +65,9 @@ productSchema
   .virtual('reviews')
   .get(function () { return this.calificaciones; })
   .set(function (v) { this.calificaciones = v; });
+
+// (opcional) índice compuesto útil si luego consultas por tienda + más vendidos
+// productSchema.index({ tienda: 1, soldCount: -1 });
 
 const Product = mongoose.model('Product', productSchema);
 module.exports = Product;
