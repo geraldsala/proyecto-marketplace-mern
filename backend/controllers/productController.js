@@ -1,5 +1,5 @@
 const asyncHandler = require('express-async-handler');
-const Product = require('../models/productModel.js'); // Asegúrate que la ruta sea correcta
+const Product = require('../models/Product.js');
 const Category = require('../models/categoryModel.js'); // Importamos el modelo de Categoría
 
 // @desc    Obtener todos los productos (con filtros opcionales)

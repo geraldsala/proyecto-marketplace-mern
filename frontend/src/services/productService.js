@@ -33,8 +33,8 @@ function wlSave(set) {
 }
 
 // ================== Productos ==================
-const getProducts = async (keyword = '') => {
-  const { data } = await axios.get(`${API_URL}?keyword=${encodeURIComponent(keyword)}`);
+const getProducts = async (keyword = '', category = '') => {
+  const { data } = await axios.get(`${API_URL}?keyword=${encodeURIComponent(keyword)}&category=${encodeURIComponent(category)}`);
   return data;
 };
 

@@ -4,12 +4,13 @@ import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTruckFast } from '@fortawesome/free-solid-svg-icons';
 
-// Asumimos que la estructura de tu ProductCard es similar a esta.
-// Si es diferente, solo necesitas aplicar el cambio en la línea del precio.
 const ProductCard = ({ product }) => {
   // Función para determinar la ruta correcta según la categoría
   const getProductLink = (category) => {
-    switch (category.toLowerCase()) {
+    // Verificamos si la categoría es un string válido antes de usar toLowerCase()
+    const safeCategory = typeof category === 'string' ? category : '';
+
+    switch (safeCategory.toLowerCase()) {
       case 'laptops':
         return `/producto/laptop/${product._id}`;
       case 'audio':
@@ -35,9 +36,7 @@ const ProductCard = ({ product }) => {
           </Card.Title>
         </Link>
         
-        {/* --- LÍNEA AÑADIDA --- */}
         <div className="product-brand text-muted mb-2">{product.brand}</div>
-        {/* -------------------- */}
 
         <Card.Text as="div" className="mt-auto">
           <div className="mb-2">

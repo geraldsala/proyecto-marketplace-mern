@@ -10,7 +10,7 @@ const {
 } = require('../controllers/productController.js');
 
 // Importamos ambos middlewares, 'protect' para autenticación y 'authorize' para roles
-const { protect, authorize } = require('../middleware/authMiddleware.js');
+const { protect, authorize } = require('../middlewares/authMiddleware.js');
 
 // --- Rutas Públicas (Cualquier usuario puede acceder) ---
 router.route('/').get(getProducts);

@@ -15,10 +15,15 @@ const ScrollToTopButton = () => {
   }, []);
 
   const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
-    });
+    const scrollStep = () => {
+      const currentScroll = window.scrollY;
+      if (currentScroll > 0) {
+        // Cambia el número 10 para ajustar la velocidad (menor = más lento)
+        window.scrollTo(0, currentScroll - 10);
+        requestAnimationFrame(scrollStep);
+      }
+    };
+    requestAnimationFrame(scrollStep);
   };
 
   return (

@@ -1,3 +1,4 @@
+// frontend/src/pages/celulares.js
 import React, { useState, useEffect, useMemo } from 'react';
 import { Container, Row, Col, Form, Button, Alert } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -8,6 +9,7 @@ import './celulares.css';
 
 const BRANDS = ['Xiaomi', 'Samsung', 'Honor'];
 const CATEGORIES = ['Smartphones', 'Accesorios'];
+const CELULARES_CATEGORY_ID = '68a8040b72eae1ed4d979949';
 
 const CelularesPage = () => {
   const [allProducts, setAllProducts] = useState([]);
@@ -19,22 +21,36 @@ const CelularesPage = () => {
   const [sortBy, setSortBy] = useState('relevance');
   const [perPage, setPerPage] = useState(24);
   const [gridMode, setGridMode] = useState('grid');
-
   const minPrice = 150000;
   const maxPrice = 500000;
 
-  useEffect(() => {
+    useEffect(() => {
     const fetchProducts = async () => {
       try {
+        // --- CAMBIO 2: Llama a getProducts() SIN parámetros para traer todo ---
         const productsFromAPI = await productService.getProducts();
-        const celularesProducts = productsFromAPI.filter(p => p.categoria === 'Celulares');
+
+        // --- CAMBIO 3: Agrega el filtro en el frontend, igual que en audio.js ---
+        const celularesProducts = productsFromAPI.filter(product => {
+          if (!product.categoria) return false;
+          
+          if (typeof product.categoria === 'object' && product.categoria._id) {
+            return product.categoria._id === CELULARES_CATEGORY_ID;
+          }
+          if (typeof product.categoria === 'string') {
+            return product.categoria === CELULARES_CATEGORY_ID;
+          }
+          return false;
+        });
+
         setAllProducts(celularesProducts);
       } catch (err) {
-        setError('No se pudieron cargar los productos.');
+        setError('No se pudieron cargar los productos de celulares.');
+        console.error(err);
       }
     };
     fetchProducts();
-  }, []);
+   }, []);
 
   const getBrandFromProductName = (productName) => {
     const lowerCaseName = productName.toLowerCase();
@@ -59,6 +75,15 @@ const CelularesPage = () => {
     if (activeBrands.length) {
       data = data.filter(p => activeBrands.includes(getBrandFromProductName(p.nombre)));
     }
+    const activeCats = Object.entries(catChecks).filter(([, v]) => v).map(([k]) => k);
+    if (activeCats.length) {
+      data = data.filter(p => {
+        const productName = p.nombre.toLowerCase();
+        if (activeCats.includes('Audífonos') && (productName.includes('headset') || productName.includes('audífonos'))) return true;
+        if (activeCats.includes('Bocinas') && (productName.includes('parlante') || productName.includes('bocina') || productName.includes('speaker'))) return true;
+        return false;
+      });
+    }
     if (sortBy === 'price-asc') data.sort((a, b) => a.precio - b.precio);
     if (sortBy === 'price-desc') data.sort((a, b) => b.precio - a.precio);
     if (sortBy === 'brand') data.sort((a, b) => getBrandFromProductName(a.nombre).localeCompare(getBrandFromProductName(b.nombre)));
@@ -71,32 +96,28 @@ const CelularesPage = () => {
   return (
     <div className="celulares-page">
       <Container fluid className="pt-3">
-        {/* Barra superior */}
         <Row className="align-items-center g-3 px-2">
-            <Col xs="12" className="breadcrumbs"><small><span className="crumb">Inicio</span> / <span className="crumb">Tecnología</span> / <strong>Celulares</strong></small></Col>
-            <Col md="3" className="d-flex align-items-center gap-2"><FontAwesomeIcon icon={faFilter} /><h5 className="m-0">Filtrar por:</h5></Col>
-            <Col md="3" className="text-md-start text-muted"><small>Mostrando <strong>1–{Math.min(perPage, filtered.length)}</strong> de <strong>{filtered.length}</strong> resultados</small></Col>
-            <Col md="3" className="d-flex justify-content-md-end">
-                <Form.Select size="sm" value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="w-auto">
-                    <option value="relevance">Ordenar por…</option>
-                    <option value="price-asc">Precio: menor a mayor</option>
-                    <option value="price-desc">Precio: mayor a menor</option>
-                    <option value="brand">Marca (A-Z)</option>
-                </Form.Select>
-            </Col>
-            <Col md="3" className="d-flex justify-content-md-end align-items-center gap-2">
-                <small className="text-muted">Mostrar:</small>
-                <Form.Select size="sm" value={perPage} onChange={(e) => setPerPage(Number(e.target.value))} className="w-auto">
-                    <option value={12}>12</option><option value={24}>24</option><option value={48}>48</option>
-                </Form.Select>
-                <Button variant={gridMode === 'grid' ? 'dark' : 'outline-dark'} size="sm" onClick={() => setGridMode('grid')}><FontAwesomeIcon icon={faThLarge} /></Button>
-                <Button variant={gridMode === 'list' ? 'dark' : 'outline-dark'} size="sm" onClick={() => setGridMode('list')}><FontAwesomeIcon icon={faBars} /></Button>
-            </Col>
+          <Col xs="12" className="breadcrumbs"><small><span className="crumb">Inicio</span> / <span className="crumb">Tecnología</span> / <strong>Celulares</strong></small></Col>
+          <Col md="3" className="d-flex align-items-center gap-2"><FontAwesomeIcon icon={faFilter} /><h5 className="m-0">Filtrar por:</h5></Col>
+          <Col md="3" className="text-md-start text-muted"><small>Mostrando <strong>1–{Math.min(perPage, filtered.length)}</strong> de <strong>{filtered.length}</strong> resultados</small></Col>
+          <Col md="3" className="d-flex justify-content-md-end">
+            <Form.Select size="sm" value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="w-auto">
+              <option value="relevance">Ordenar por…</option>
+              <option value="price-asc">Precio: menor a mayor</option>
+              <option value="price-desc">Precio: mayor a menor</option>
+              <option value="brand">Marca (A-Z)</option>
+            </Form.Select>
+          </Col>
+          <Col md="3" className="d-flex justify-content-md-end align-items-center gap-2">
+            <small className="text-muted">Mostrar:</small>
+            <Form.Select size="sm" value={perPage} onChange={(e) => setPerPage(Number(e.target.value))} className="w-auto">
+              <option value={12}>12</option><option value={24}>24</option><option value={48}>48</option>
+            </Form.Select>
+            <Button variant={gridMode === 'grid' ? 'dark' : 'outline-dark'} size="sm" onClick={() => setGridMode('grid')}><FontAwesomeIcon icon={faThLarge} /></Button>
+            <Button variant={gridMode === 'list' ? 'dark' : 'outline-dark'} size="sm" onClick={() => setGridMode('list')}><FontAwesomeIcon icon={faBars} /></Button>
+          </Col>
         </Row>
-
-        {/* Contenido */}
         <Row className="mt-3 gx-4">
-          {/* Filtros */}
           <Col lg="3" className="mb-4">
             <aside className="filters card border-0 shadow-sm p-3">
               <h6 className="mb-3">CATEGORÍAS</h6>
@@ -118,8 +139,6 @@ const CelularesPage = () => {
               </div>
             </aside>
           </Col>
-
-          {/* Listado */}
           <Col lg="9">
             {error && <Alert variant='danger'>{error}</Alert>}
             <div className={gridMode === 'grid' ? 'grid-products' : 'list-products'}>
@@ -134,7 +153,9 @@ const CelularesPage = () => {
                       <span className="badge-ship"><FontAwesomeIcon icon={faTruckFast} className="me-1" />{product.tiempoEnvio}</span>
                     </div>
                     <h6 className="title">{product.nombre}</h6>
-                    <div className="meta"><span className="brand">{getBrandFromProductName(product.nombre)}</span></div>
+                    <div className="meta">
+                      <span className="brand">{getBrandFromProductName(product.nombre)}</span>
+                    </div>
                     <div className="price">₡{product.precio.toLocaleString('es-CR')}</div>
                     <div className="actions">
                       <LinkContainer to={`/producto/celular/${product._id}`}>
