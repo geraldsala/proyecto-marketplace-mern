@@ -113,8 +113,17 @@ const markOrderPaid = asyncHandler(async (req, res) => {
   res.json({ message: 'Orden pagada', orderId: order._id, orderNumber: order.orderNumber });
 });
 
+
+const getMyOrders = asyncHandler(async (req, res) => {
+  const orders = await Order.find({ user: req.user._id })
+    .sort({ createdAt: -1 })
+    .populate('user', 'nombre email'); // opcional
+  res.json(orders);
+});
+
 module.exports = {
   createOrder,
   getOrderById,
   markOrderPaid, 
+  getMyOrders,
 };

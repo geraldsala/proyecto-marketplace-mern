@@ -1,31 +1,23 @@
-// backend/routes/orderRoutes.js
 const express = require('express');
 const router = express.Router();
-
 const {
   createOrder,
   getOrderById,
-  markOrderPaid,   // opcional: confirmar pago real si lo usas
+  markOrderPaid,
+  getMyOrders,
 } = require('../controllers/orderController.js');
-
 const { protect } = require('../middlewares/authMiddleware.js');
 
-// Logger para rutas con :id (útil para depurar)
-router.use('/:id', (req, res, next) => {
-  console.log(
-    `[ORDER ROUTES] La petición llegó a las rutas de órdenes para el ID: ${req.params.id}`
-  );
-  next();
-});
-
-// Crear una nueva orden (pagada simulada en createOrder)
+// Crear orden
 router.post('/', protect, createOrder);
 
-// Obtener una orden por su ID (detalle + user populado)
+// 💡 IMPORTANTE: esta va ANTES de '/:id'
+router.get('/myorders', protect, getMyOrders);
+
+// Obtener detalle por id
 router.get('/:id', protect, getOrderById);
 
-// (Opcional) Confirmar pago real de una orden existente
-// Úsalo si NO marcas como pagada al crear la orden.
+// (opcional) Marcar pagada
 router.put('/:id/pay', protect, markOrderPaid);
 
 module.exports = router;

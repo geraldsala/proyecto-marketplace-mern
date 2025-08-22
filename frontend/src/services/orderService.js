@@ -1,15 +1,17 @@
 // frontend/src/services/orderService.js
 import api from './api';
 
-const createOrder = async (payload) => {
-  const { data } = await api.post('/api/orders', payload);
-  // data = { orderId, orderNumber }
-  return data;
-};
+const createOrder = async (payload) =>
+  (await api.post('/api/orders', payload)).data;
 
-const getOrderById = async (id) => {
-  const { data } = await api.get(`/api/orders/${id}`);
-  return data;
-};
+const getOrderById = async (id) =>
+  (await api.get(`/api/orders/${id}`)).data;
 
-export default { createOrder, getOrderById };
+const getMyOrders = async () => (await api.get('/api/orders/myorders')).data;
+
+
+export default {
+  createOrder,
+  getOrderById,
+  getMyOrders,
+};

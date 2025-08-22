@@ -29,6 +29,7 @@ import CheckoutPage from './pages/CheckoutPage';
 import OrderPage from './pages/OrderPage';
 import StorePage from './pages/StorePage';
 import OrderSuccess from './pages/OrderSuccess';
+import AccountOrders from './pages/AccountOrders';
 
 function App() {
   return (
@@ -60,6 +61,7 @@ function App() {
             <Route path="/order/:id" element={<OrderPage />} />
             <Route path="/tienda/:slug" element={<StorePage />} />
             <Route path="/orden/:id/exito" element={<OrderSuccess />} />
+            <Route path="/mi-cuenta/historial" element={<AccountOrders />} />
 
 
           </Routes>
