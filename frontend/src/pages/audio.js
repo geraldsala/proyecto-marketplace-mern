@@ -176,7 +176,7 @@ const AudioPage = () => {
                                         </div>
                                         <div className="price">₡{product.precio.toLocaleString('es-CR')}</div>
                                         <div className="actions">
-                                            <LinkContainer to={`/producto/audio/${product._id}`}>
+                                            <LinkContainer to={`/producto/${product._id}`}>
                                                 <Button size="sm" variant="dark">Ver detalle</Button>
                                             </LinkContainer>
                                             <Button size="sm" variant="outline-dark">Agregar</Button>

@@ -48,12 +48,17 @@
 }
 
 /* Thumbs */
-.product-card .thumb{
-  position:relative;
-  background:#fafafa;
-  display:flex;
-  align-items:center;
-  justify-content:center;
+.product-card .thumb img {
+  /* --- CAMBIOS CLAVE --- */
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  /* --- FIN DE CAMBIOS --- */
+
+  object-fit: contain;
+  padding: 10px; /* Esto es opcional, para que la imagen tenga un margen */
 }
 .grid-products .product-card .thumb{ height:190px; }
 .list-products .product-card .thumb{ width:240px; height:160px; border-radius:10px; overflow:hidden; }

@@ -6,26 +6,21 @@ import { faHeart as faHeartSolid } from '@fortawesome/free-solid-svg-icons';
 import { faHeart as faHeartRegular } from '@fortawesome/free-regular-svg-icons';
 import productService from '../services/productService';
 import { useCart } from '../context/CartContext';
-import { useAuth } from '../context/AuthContext'; // Importamos el contexto de autenticación
+import { useAuth } from '../context/AuthContext';
 
 const ProductPage = () => {
-  // --- Estados existentes ---
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [qty, setQty] = useState(1);
-
-  // --- NUEVOS ESTADOS PARA WISHLIST Y REPORTES ---
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
 
-  // --- Hooks ---
   const { id: productId } = useParams();
   const { addToCart } = useCart();
-  const { userInfo } = useAuth(); // Obtenemos la info del usuario para la wishlist
+  const { userInfo } = useAuth();
   const navigate = useNavigate();
 
-  // --- Efecto principal para cargar el producto ---
   useEffect(() => {
     const fetchProduct = async () => {
       setLoading(true);
@@ -41,15 +36,14 @@ const ProductPage = () => {
     fetchProduct();
   }, [productId]);
 
-  // --- NUEVO EFECTO PARA VERIFICAR LA WISHLIST ---
-  // Se ejecuta después de cargar el producto y si el usuario está logueado
+  // --- CORRECCIÓN 1: useEffect para verificar la wishlist de forma más eficiente ---
   useEffect(() => {
     const checkWishlistStatus = async () => {
       if (userInfo && product) {
         try {
-          const wishlist = await productService.getWishlist();
-          const productInWishlist = wishlist.some(item => item._id === product._id);
-          setIsInWishlist(productInWishlist);
+          // Usamos la función específica para esto, si existe en tu servicio
+          const status = await productService.isInWishlist(product._id);
+          setIsInWishlist(status);
         } catch (wishlistError) {
           console.error("Error al verificar la wishlist", wishlistError);
         }
@@ -58,32 +52,34 @@ const ProductPage = () => {
     checkWishlistStatus();
   }, [product, userInfo]);
 
-
-  // --- MANEJADORES DE EVENTOS (HANDLERS) ---
   const addToCartHandler = () => {
     addToCart(product, Number(qty));
     navigate('/cart');
   };
 
+  // --- CORRECCIÓN 2: Lógica correcta para agregar o quitar de la wishlist ---
   const wishlistHandler = async () => {
     if (!userInfo) {
       navigate('/login');
       return;
     }
     try {
-      await productService.toggleWishlist(product._id);
+      if (isInWishlist) {
+        await productService.removeFromWishlist(product._id);
+      } else {
+        await productService.addToWishlist(product._id);
+      }
       setIsInWishlist(!isInWishlist); // Actualizamos el estado visualmente
     } catch (err) {
       alert('No se pudo actualizar la wishlist.');
+      console.error(err);
     }
   };
 
   const reportHandler = () => {
-    // Aquí iría la lógica para enviar el reporte al backend
     console.log("Reporte enviado");
     setShowReportModal(false);
   };
-
 
   if (loading) return <Container className="text-center py-5"><Spinner animation="border" /></Container>;
   if (error) return <Container className="py-5"><Alert variant="danger">{error}</Alert></Container>;
@@ -139,26 +135,22 @@ const ProductPage = () => {
                       Agregar al Carrito
                     </Button>
                   </ListGroup.Item>
-
-                  {/* --- NUEVA SECCIÓN DE BOTONES ADICIONALES --- */}
                   <ListGroup.Item className="d-flex justify-content-center align-items-center">
                     <Button variant="link" onClick={wishlistHandler} className="text-danger">
                       <FontAwesomeIcon icon={isInWishlist ? faHeartSolid : faHeartRegular} className="me-2" />
                       {isInWishlist ? 'En mi Wishlist' : 'Añadir a Wishlist'}
                     </Button>
                   </ListGroup.Item>
-
                 </ListGroup>
               </Card>
               <div className="text-center mt-3">
-                 <Button variant="link" size="sm" onClick={() => setShowReportModal(true)}>
-                    Reportar producto
-                 </Button>
+                <Button variant="link" size="sm" onClick={() => setShowReportModal(true)}>
+                  Reportar producto
+                </Button>
               </div>
             </Col>
           </Row>
 
-          {/* --- NUEVO MODAL PARA REPORTAR PRODUCTO --- */}
           <Modal show={showReportModal} onHide={() => setShowReportModal(false)}>
             <Modal.Header closeButton>
               <Modal.Title>Reportar Producto</Modal.Title>
