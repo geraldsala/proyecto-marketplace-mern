@@ -5,8 +5,8 @@ const generateToken = require('../utils/generateToken.js');
 const { luhnCheck } = require('../utils/validation.js');
 
 /**
- * POST /api/users/login
- * Autenticar usuario y obtener token
+ * @desc    Autenticar usuario y obtener token
+ * @route   POST /api/users/login
  */
 const authUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
@@ -27,12 +27,10 @@ const authUser = asyncHandler(async (req, res) => {
 });
 
 /**
- * POST /api/users/register
- * Registrar un nuevo usuario
+ * @desc    Registrar un nuevo usuario
+ * @route   POST /api/users/register
  */
 const registerUser = asyncHandler(async (req, res) => {
-  // ANTES: solo recibíamos unos pocos campos.
-  // AHORA: destructuramos todos los campos nuevos del formulario.
   const { 
     nombre, 
     email, 
@@ -45,7 +43,7 @@ const registerUser = asyncHandler(async (req, res) => {
     telefono,
     fotoLogo,
     redesSociales,
-    nombreTienda // Este ya lo tenías, ¡genial!
+    nombreTienda
   } = req.body;
 
   const userExists = await User.findOne({ email });
@@ -55,7 +53,6 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new Error('El usuario ya existe');
   }
 
-  // AÑADIMOS los nuevos campos al objeto que se guardará en la base de datos.
   const user = await User.create({ 
     nombre, 
     email, 
@@ -86,8 +83,8 @@ const registerUser = asyncHandler(async (req, res) => {
 });
 
 /**
- * GET /api/users/profile
- * Obtener perfil de usuario (con compatibilidad de campos antiguos)
+ * @desc    Obtener perfil de usuario
+ * @route   GET /api/users/profile
  */
 const getUserProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
@@ -95,147 +92,110 @@ const getUserProfile = asyncHandler(async (req, res) => {
 
   const u = user.toObject();
 
-  // Normaliza arrays inexistentes a []
   if (!Array.isArray(u.addresses)) u.addresses = [];
   if (!Array.isArray(u.paymentMethods)) u.paymentMethods = [];
-  if (!Array.isArray(u.direccionesEnvio)) u.direccionesEnvio = [];
-  if (!Array.isArray(u.formasPago)) u.formasPago = [];
-
-  // Backfill para compatibilidad
-  if (u.addresses.length === 0 && u.direccionesEnvio.length > 0) {
+  if (u.addresses.length === 0 && u.direccionesEnvio?.length > 0) {
     u.addresses = u.direccionesEnvio;
   }
-  if (u.paymentMethods.length === 0 && u.formasPago.length > 0) {
+  if (u.paymentMethods.length === 0 && u.formasPago?.length > 0) {
     u.paymentMethods = u.formasPago;
   }
 
   res.json(u);
 });
 
+
 /**
- * POST /api/users/addresses
- * Agregar dirección de envío (acepta campos del formulario actual)
+ * @desc    Actualizar perfil del usuario
+ * @route   PUT /api/users/profile
+ */
+const updateUserProfile = asyncHandler(async (req, res) => {
+    const user = await User.findById(req.user._id);
+
+    if (user) {
+        user.nombre = req.body.nombre || user.nombre;
+        user.email = req.body.email || user.email;
+        if (req.body.password) {
+            user.password = req.body.password;
+        }
+        
+        const updatedUser = await user.save();
+        
+        res.json({
+            _id: updatedUser._id,
+            nombre: updatedUser.nombre,
+            email: updatedUser.email,
+            tipoUsuario: updatedUser.tipoUsuario,
+            token: generateToken(updatedUser._id),
+        });
+    } else {
+        res.status(404);
+        throw new Error('Usuario no encontrado');
+    }
+});
+
+
+/**
+ * @desc    Agregar dirección de envío
+ * @route   POST /api/users/addresses
  */
 const addShippingAddress = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
   if (!user) { res.status(404); throw new Error('Usuario no encontrado'); }
 
-  // Asegura arrays
   if (!Array.isArray(user.addresses)) user.addresses = [];
+  
+  const newAddressData = req.body; // Suponiendo que el frontend envía los datos correctos
+  user.addresses.push(newAddressData);
+
+  // Lógica de compatibilidad si aún la usas
   if (!Array.isArray(user.direccionesEnvio)) user.direccionesEnvio = [];
-
-  const {
-    titulo,
-    pais,
-    provincia,
-    direccion,
-    casillero,
-    codigoPostal,
-    observaciones,
-    isDefault
-  } = req.body;
-
-  const direccionFinal = direccion || casillero;
-  if (!provincia || !direccionFinal) {
-    res.status(400);
-    throw new Error('Faltan campos requeridos de la dirección');
-  }
-
-  const totalPrevio = (user.addresses?.length || 0) + (user.direccionesEnvio?.length || 0);
-  const willBeDefault = !!isDefault || totalPrevio === 0;
-
-  if (willBeDefault) {
-    (user.addresses || []).forEach(a => (a.isDefault = false));
-    (user.direccionesEnvio || []).forEach(a => (a.isDefault = false));
-  }
-
-  const doc = {
-    nombre: titulo || 'Principal',
-    receptor: user.nombre || '',
-    telefono: user.telefono || '',
-    pais: pais || user.pais || '',
-    provincia,
-    canton: '',
-    distrito: '',
-    direccion: direccionFinal,
-    zip: codigoPostal || '',
-    observaciones: observaciones || '',
-    isDefault: willBeDefault
-  };
-
-  user.addresses.push(doc);
-  user.direccionesEnvio.push(doc);
-
+  user.direccionesEnvio.push(newAddressData);
+  
   await user.save();
   return res.status(201).json({ addresses: user.addresses });
 });
 
+
 /**
- * DELETE /api/users/addresses/:addressId
- * Eliminar dirección de envío (borra en ambos arrays; re-asigna default si aplica)
+ * @desc    Eliminar dirección de envío
+ * @route   DELETE /api/users/addresses/:addressId
  */
 const deleteShippingAddress = asyncHandler(async (req, res) => {
   const { addressId } = req.params;
   const user = await User.findById(req.user._id);
   if (!user) { res.status(404); throw new Error('Usuario no encontrado'); }
 
-  if (!Array.isArray(user.addresses)) user.addresses = [];
-  if (!Array.isArray(user.direccionesEnvio)) user.direccionesEnvio = [];
-
-  let idxNew = user.addresses.findIndex(a => String(a._id) === String(addressId));
-  let idxOld = user.direccionesEnvio.findIndex(a => String(a._id) === String(addressId));
-
-  if (idxNew === -1 && idxOld !== -1) {
-    const target = user.direccionesEnvio[idxOld];
-    idxNew = user.addresses.findIndex(a => a.direccion === target.direccion && a.provincia === target.provincia);
-  }
-  if (idxOld === -1 && idxNew !== -1) {
-    const target = user.addresses[idxNew];
-    idxOld = user.direccionesEnvio.findIndex(a => a.direccion === target.direccion && a.provincia === target.provincia);
-  }
-
-  const wasDefault =
-    (idxNew !== -1 && user.addresses[idxNew]?.isDefault) ||
-    (idxOld !== -1 && user.direccionesEnvio[idxOld]?.isDefault);
-
-  if (idxNew !== -1) user.addresses.splice(idxNew, 1);
-  if (idxOld !== -1) user.direccionesEnvio.splice(idxOld, 1);
-
-  if (wasDefault) {
-    if (user.addresses.length > 0) user.addresses[0].isDefault = true;
-    if (user.direccionesEnvio.length > 0) user.direccionesEnvio[0].isDefault = true;
-  }
+  user.addresses.pull({ _id: addressId });
+  // Lógica de compatibilidad
+  if(user.direccionesEnvio) user.direccionesEnvio.pull({ _id: addressId });
 
   await user.save();
   return res.json({ addresses: user.addresses });
 });
 
+
 /**
- * POST /api/users/paymentmethods
- * Agregar método de pago, VALIDANDO con Luhn antes de guardar.
+ * @desc    Agregar método de pago
+ * @route   POST /api/users/paymentmethods
  */
 const addPaymentMethod = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
   if (!user) { res.status(404); throw new Error('Usuario no encontrado'); }
 
-  // 1. Recibimos el número de tarjeta COMPLETO del frontend, además de los otros datos.
   const { numeroTarjeta, brand, holderName, expMonth, expYear, isDefault } = req.body;
 
-  // 2. Validamos con el algoritmo de Luhn.
   if (!numeroTarjeta || !luhnCheck(numeroTarjeta)) {
     res.status(400);
     throw new Error('El número de tarjeta no es válido.');
   }
   
-  // 3. Si pasa, guardamos SOLO los datos seguros. NUNCA el número completo.
   if (!Array.isArray(user.paymentMethods)) user.paymentMethods = [];
-  if (!Array.isArray(user.formasPago)) user.formasPago = [];
-
+  
   const willBeDefault = !!isDefault || user.paymentMethods.length === 0;
 
   if (willBeDefault) {
     user.paymentMethods.forEach(m => (m.isDefault = false));
-    user.formasPago.forEach(m => (m.isDefault = false));
   }
 
   const doc = { 
@@ -244,61 +204,120 @@ const addPaymentMethod = asyncHandler(async (req, res) => {
     expMonth, 
     expYear,
     isDefault: willBeDefault,
-    last4: numeroTarjeta.slice(-4) // <-- Extraemos los últimos 4 dígitos
+    last4: numeroTarjeta.slice(-4)
   };
 
   user.paymentMethods.push(doc);
-  user.formasPago.push(doc); // Mantenemos la retrocompatibilidad
+  // Lógica de compatibilidad
+  if (!Array.isArray(user.formasPago)) user.formasPago = [];
+  user.formasPago.push(doc);
 
   await user.save();
-  
-  // 4. Devolvemos la lista COMPLETA y actualizada de métodos de pago.
   res.status(201).json(user.paymentMethods);
 });
 
+
 /**
- * DELETE /api/users/paymentmethods/:methodId
- * Eliminar método de pago (borra en ambos arrays; re-asigna default si aplica)
+ * @desc    Eliminar método de pago
+ * @route   DELETE /api/users/paymentmethods/:methodId
  */
 const deletePaymentMethod = asyncHandler(async (req, res) => {
   const { methodId } = req.params;
   const user = await User.findById(req.user._id);
   if (!user) { res.status(404); throw new Error('Usuario no encontrado'); }
 
-  // Tu lógica de borrado para retrocompatibilidad es buena, la mantenemos.
   user.paymentMethods.pull({ _id: methodId });
-  user.formasPago.pull({ _id: methodId });
-
-  // Reasignar default si es necesario...
-  const wasDefault = !user.paymentMethods.some(m => m.isDefault);
-  if (wasDefault && user.paymentMethods.length > 0) {
-    user.paymentMethods[0].isDefault = true;
-    // También actualiza el campo antiguo si lo usas
-    const oldDefaultId = user.paymentMethods[0]._id;
-    const oldMethod = user.formasPago.id(oldDefaultId);
-    if(oldMethod) oldMethod.isDefault = true;
-  }
+  // Lógica de compatibilidad
+  if (user.formasPago) user.formasPago.pull({ _id: methodId });
   
   await user.save();
-  
-  // Devolvemos la lista COMPLETA y actualizada.
   res.json(user.paymentMethods);
 });
 
-// Asegúrate de que tu exportación esté completa
-module.exports = {
-  // ...
-  addPaymentMethod,
-  deletePaymentMethod,
-  // ...
-};
+
+/**
+ * @desc    Obtener la wishlist del usuario
+ * @route   GET /api/users/wishlist
+ */
+const getWishlist = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id).populate('wishlist');
+  if (user) {
+    res.json(user.wishlist);
+  } else {
+    res.status(404);
+    throw new Error('Usuario no encontrado');
+  }
+});
+
+
+/**
+ * @desc    Añadir un producto a la wishlist
+ * @route   POST /api/users/wishlist
+ */
+const addToWishlist = asyncHandler(async (req, res) => {
+  const { productId } = req.body;
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    { $addToSet: { wishlist: productId } },
+    { new: true }
+  );
+  if (user) {
+    res.status(201).json({ message: 'Producto añadido a la wishlist' });
+  } else {
+    res.status(404);
+    throw new Error('Usuario no encontrado');
+  }
+});
+
+
+/**
+ * @desc    Eliminar un producto de la wishlist
+ * @route   DELETE /api/users/wishlist/:productId
+ */
+const removeFromWishlist = asyncHandler(async (req, res) => {
+  const { productId } = req.params;
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    { $pull: { wishlist: productId } },
+    { new: true }
+  );
+  if (user) {
+    res.json({ message: 'Producto eliminado de la wishlist' });
+  } else {
+    res.status(404);
+    throw new Error('Usuario no encontrado');
+  }
+});
+
+
+/**
+ * @desc    Comprobar si un producto está en la wishlist
+ * @route   GET /api/users/wishlist/:productId/status
+ */
+const checkWishlistStatus = asyncHandler(async (req, res) => {
+    const { productId } = req.params;
+    const user = await User.findById(req.user._id);
+    if (user) {
+        const inWishlist = user.wishlist.some(pId => pId.equals(productId));
+        res.json({ inWishlist });
+    } else {
+        res.status(404);
+        throw new Error('Usuario no encontrado');
+    }
+});
+
 
 module.exports = {
   authUser,
   registerUser,
   getUserProfile,
+  updateUserProfile,
   addShippingAddress,
   deleteShippingAddress,
   addPaymentMethod,
   deletePaymentMethod,
+  getWishlist,
+  addToWishlist,
+  removeFromWishlist,
+  checkWishlistStatus,
 };

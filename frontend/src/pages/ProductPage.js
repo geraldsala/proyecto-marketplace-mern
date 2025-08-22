@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Container, Row, Col, Image, ListGroup, Card, Button, Spinner, Alert, Form, Modal } from 'react-bootstrap';
+import { Container, Row, Col, Image, ListGroup, Card, Button, Spinner, Alert, Form } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHeart as faHeartSolid, faStore } from '@fortawesome/free-solid-svg-icons';
 import { faHeart as faHeartRegular } from '@fortawesome/free-regular-svg-icons';
-import productService from '../services/productService';
+import productService from '../services/productService'; // Se mantiene para getProductById
+import userService from '../services/userService';       // ¡NUEVO! Para wishlist y suscripciones
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -14,15 +15,15 @@ const ProductPage = () => {
   const [error, setError] = useState('');
   const [qty, setQty] = useState(1);
   const [isInWishlist, setIsInWishlist] = useState(false);
-  const [showReportModal, setShowReportModal] = useState(false);
-  const [isSubscribed, setIsSubscribed] = useState(false); // suscripción a la tienda
+  const [showReportModal, setShowReportModal] = useState(false); // Mantienes tu lógica de modal
+  const [isSubscribed, setIsSubscribed] = useState(false);
 
   const { id: productId } = useParams();
   const { addToCart } = useCart();
   const { userInfo } = useAuth();
   const navigate = useNavigate();
 
-  // Carga del producto
+  // Carga del producto (sin cambios)
   useEffect(() => {
     const fetchProduct = async () => {
       setLoading(true);
@@ -38,26 +39,23 @@ const ProductPage = () => {
     fetchProduct();
   }, [productId]);
 
-  // Verifica wishlist y suscripción a la tienda (con storeId normalizado)
+  // Verifica wishlist y suscripción (usando userService)
   useEffect(() => {
     const checkStatus = async () => {
       if (userInfo && product) {
         try {
           const [wishlistStatus, subscriptions] = await Promise.all([
-            productService.isInWishlist(product._id),
-            productService.getMySubscriptions(),
+            userService.isInWishlist(product._id),      // <-- CAMBIO
+            userService.getMySubscriptions(),         // <-- CAMBIO
           ]);
 
           setIsInWishlist(wishlistStatus);
 
           if (product.tienda) {
-            const productStoreId =
-              typeof product.tienda === 'string' ? product.tienda : product.tienda?._id;
-
+            const productStoreId = typeof product.tienda === 'string' ? product.tienda : product.tienda?._id;
             const isAlreadySubscribed = subscriptions.some(
               (store) => String(store._id) === String(productStoreId)
             );
-
             setIsSubscribed(isAlreadySubscribed);
           }
         } catch (err) {
@@ -77,9 +75,9 @@ const ProductPage = () => {
     if (!userInfo) return navigate('/login');
     try {
       if (isInWishlist) {
-        await productService.removeFromWishlist(product._id);
+        await userService.removeFromWishlist(product._id); // <-- CAMBIO
       } else {
-        await productService.addToWishlist(product._id);
+        await userService.addToWishlist(product._id);      // <-- CAMBIO
       }
       setIsInWishlist(!isInWishlist);
     } catch (err) {
@@ -88,58 +86,36 @@ const ProductPage = () => {
     }
   };
 
-  // Toggle suscripción con storeId robusto
   const handleSubscribeToggle = async () => {
     if (!userInfo) return navigate('/login');
     try {
-      const storeId =
-        typeof product.tienda === 'string' ? product.tienda : product.tienda?._id;
+      const storeId = typeof product.tienda === 'string' ? product.tienda : product.tienda?._id;
       if (!storeId) {
         throw new Error('No se encontró el ID de la tienda en el producto.');
       }
-      await productService.toggleSubscription(storeId);
+      await userService.toggleSubscription(storeId); // <-- CAMBIO
       setIsSubscribed(!isSubscribed);
     } catch (err) {
-      const msg =
-        err?.response?.data?.message ||
-        err.message ||
-        'No se pudo actualizar la suscripción a la tienda.';
-      alert(msg);
+      alert(err?.response?.data?.message || 'No se pudo actualizar la suscripción.');
       console.error(err);
     }
   };
-
+  
   const reportHandler = () => {
     console.log('Reporte enviado');
     setShowReportModal(false);
   };
 
   if (loading) {
-    return (
-      <Container className="text-center py-5">
-        <Spinner animation="border" />
-      </Container>
-    );
+    return <Container className="text-center py-5"><Spinner animation="border" /></Container>;
   }
 
   if (error) {
-    return (
-      <Container className="py-5">
-        <Alert variant="danger">{error}</Alert>
-      </Container>
-    );
+    return <Container className="py-5"><Alert variant="danger">{error}</Alert></Container>;
   }
 
-  // Valores seguros para el bloque "Vendido por"
-  const storeName =
-    product && product.tienda && typeof product.tienda !== 'string'
-      ? product.tienda?.nombreTienda || 'Tienda'
-      : 'Tienda';
-
-  const storeLogo =
-    product && product.tienda && typeof product.tienda !== 'string'
-      ? product.tienda?.fotoLogo
-      : null;
+  const storeName = product && product.tienda && typeof product.tienda !== 'string' ? product.tienda?.nombreTienda || 'Tienda' : 'Tienda';
+  const storeLogo = product && product.tienda && typeof product.tienda !== 'string' ? product.tienda?.fotoLogo : null;
 
   return (
     <Container className="py-4">
@@ -164,7 +140,6 @@ const ProductPage = () => {
                 </ListGroup.Item>
                 <ListGroup.Item>Descripción: {product.descripcion}</ListGroup.Item>
 
-                {/* Vendido por + botón de suscripción */}
                 {product.tienda && (
                   <ListGroup.Item>
                     <strong>Vendido por:</strong>
@@ -179,7 +154,6 @@ const ProductPage = () => {
                       )}
                       <span>{storeName}</span>
                     </div>
-
                     {userInfo && userInfo.tipoUsuario === 'comprador' && (
                       <Button
                         variant={isSubscribed ? 'outline-secondary' : 'outline-primary'}
@@ -207,14 +181,12 @@ const ProductPage = () => {
                       </Col>
                     </Row>
                   </ListGroup.Item>
-
                   <ListGroup.Item>
                     <Row>
                       <Col>Estado:</Col>
                       <Col>{product.stock > 0 ? 'En Stock' : 'Agotado'}</Col>
                     </Row>
                   </ListGroup.Item>
-
                   {product.stock > 0 && (
                     <ListGroup.Item>
                       <Row>
@@ -235,7 +207,6 @@ const ProductPage = () => {
                       </Row>
                     </ListGroup.Item>
                   )}
-
                   <ListGroup.Item className="d-grid">
                     <Button
                       onClick={addToCartHandler}
@@ -246,7 +217,6 @@ const ProductPage = () => {
                       Agregar al Carrito
                     </Button>
                   </ListGroup.Item>
-
                   <ListGroup.Item className="d-flex justify-content-center align-items-center">
                     <Button variant="link" onClick={wishlistHandler} className="text-danger">
                       <FontAwesomeIcon
@@ -258,7 +228,6 @@ const ProductPage = () => {
                   </ListGroup.Item>
                 </ListGroup>
               </Card>
-
               <div className="text-center mt-3">
                 <Button variant="link" size="sm" onClick={() => setShowReportModal(true)}>
                   Reportar producto
@@ -266,24 +235,6 @@ const ProductPage = () => {
               </div>
             </Col>
           </Row>
-
-          {/* Modal de reporte (opcional, si lo implementas) */}
-          {/* <Modal show={showReportModal} onHide={() => setShowReportModal(false)} centered>
-            <Modal.Header closeButton>
-              <Modal.Title>Reportar producto</Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-              // ...tu formulario de reporte...
-            </Modal.Body>
-            <Modal.Footer>
-              <Button variant="secondary" onClick={() => setShowReportModal(false)}>
-                Cancelar
-              </Button>
-              <Button variant="primary" onClick={reportHandler}>
-                Enviar reporte
-              </Button>
-            </Modal.Footer>
-          </Modal> */}
         </>
       )}
     </Container>
