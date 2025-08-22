@@ -1,70 +1,75 @@
-import axios from 'axios';
+import api from './api';
 
-// --- CONFIGURACIÓN CLAVE ---
-// Creamos una instancia de axios que SIEMPRE apuntará a nuestro backend.
-const api = axios.create({
-  baseURL: 'http://localhost:5000/api', // <-- LA LÍNEA MÁS IMPORTANTE
-});
+/**
+ * Productos
+ * Hacemos flexible los nombres de query por si tu backend usa 'q/category' o 'search/categoria'.
+ */
+const getProducts = async (q = '', category = '') => {
+  const params = {};
+  if (q) { params.q = q; params.search = q; }
+  if (category) { params.category = category; params.categoria = category; }
+  const { data } = await api.get('/api/products', { params });
+  return data;
+};
 
-// Interceptor para añadir el token de autenticación a todas las peticiones
-api.interceptors.request.use((config) => {
-  try {
-    const userInfo = JSON.parse(localStorage.getItem('userInfo'));
-    if (userInfo && userInfo.token) {
-      config.headers.Authorization = `Bearer ${userInfo.token}`;
-    }
-  } catch (error) {
-    console.error("Error al procesar userInfo desde localStorage", error);
-  }
-  return config;
-});
+const getProductById = async (id) => {
+  const { data } = await api.get(`/api/products/${id}`);
+  return data;
+};
 
-
-// --- SERVICIOS ---
-
-// PRODUCTOS
-const getProducts = async () => { const { data } = await api.get('/products'); return data; };
-const getProductById = async (id) => { const { data } = await api.get(`/products/${id}`); return data; };
-const getMyProducts = async () => { const { data } = await api.get('/products/myproducts'); return data; };
-const createProduct = async () => { const { data } = await api.post('/products', {}); return data; };
-const updateProduct = async (id, productData) => { const { data } = await api.put(`/products/${id}`, productData); return data; };
-const deleteProduct = async (id) => { await api.delete(`/products/${id}`); };
-
-// CATEGORÍAS
-const getCategories = async () => { const { data } = await api.get('/categories'); return data; };
-
-// WISHLIST
-const getWishlist = async () => { const { data } = await api.get('/users/wishlist'); return data; };
-const addToWishlist = async (productId) => { await api.post(`/users/wishlist/${productId}`); };
-const removeFromWishlist = async (productId) => { await api.delete(`/users/wishlist/${productId}`); };
+/**
+ * Wishlist
+ * Ajusta las rutas si tu backend usa otras.
+ */
 const isInWishlist = async (productId) => {
-    try {
-        const wishlist = await getWishlist();
-        return wishlist.some(item => item._id === productId);
-    } catch (error) {
-        return false;
-    }
+  const { data } = await api.get(`/api/users/wishlist/${productId}/status`);
+  return !!data?.inWishlist;
 };
 
-// SUSCRIPCIONES A TIENDAS
-const toggleSubscription = async (storeId) => { await api.post('/storesubscriptions/toggle', { storeId }); };
-const getMySubscriptions = async () => { const { data } = await api.get('/storesubscriptions/mystores'); return data; };
-const getMySubscribers = async () => { const { data } = await api.get('/storesubscriptions/mysubscribers'); return data; };
+const addToWishlist = async (productId) => {
+  const { data } = await api.post('/api/users/wishlist', { productId });
+  return data;
+};
 
-// --- AÑADIDO: Servicio para el pop-up de suscripción ---
+const removeFromWishlist = async (productId) => {
+  const { data } = await api.delete(`/api/users/wishlist/${productId}`);
+  return data;
+};
+
+/**
+ * Suscripciones a tiendas (coinciden con tu backend)
+ */
+const toggleSubscription = async (storeId) => {
+  const { data } = await api.post('/api/storesubscriptions/toggle', { storeId });
+  return data; // { message: '...' }
+};
+
+const getMySubscriptions = async () => {
+  const { data } = await api.get('/api/storesubscriptions/mystores');
+  return data; // [{ _id, nombreTienda, fotoLogo }]
+};
+
+const getMySubscribers = async () => {
+  const { data } = await api.get('/api/storesubscriptions/mysubscribers');
+  return data; // [{ _id, nombre, fotoLogo }]
+};
+
+/**
+ * Newsletter
+ */
 const subscribeToNewsletter = async (email) => {
-    // Usamos nuestra instancia 'api' para que la llamada vaya al puerto 5000
-    const { data } = await api.post('/subscribe', { email });
-    return data;
+  const { data } = await api.post('/api/subscribe/newsletter', { email });
+  return data; // { message: '...' }
 };
 
-
-const productService = {
-  getProducts, getProductById, getMyProducts, createProduct, updateProduct, deleteProduct,
-  getCategories,
-  getWishlist, addToWishlist, removeFromWishlist, isInWishlist,
-  toggleSubscription, getMySubscriptions, getMySubscribers,
-  subscribeToNewsletter, // <-- Exportamos la nueva función
+export default {
+  getProducts,
+  getProductById,
+  isInWishlist,
+  addToWishlist,
+  removeFromWishlist,
+  toggleSubscription,
+  getMySubscriptions,
+  getMySubscribers,
+  subscribeToNewsletter
 };
-
-export default productService;
