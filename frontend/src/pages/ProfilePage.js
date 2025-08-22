@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Container, Row, Col, Nav, Alert } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faBoxOpen, faCreditCard, faMapMarkerAlt, faHistory, faStore } from '@fortawesome/free-solid-svg-icons';
-import { AuthContext } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import './ProfilePage.css';
 
 // --- Imports de los paneles ---
@@ -15,7 +15,7 @@ import MySubscriptionsPanel from '../components/profile/MySubscriptionsPanel';
 import MySubscribersPanel from '../components/profile/MySubscribersPanel';
 
 const ProfilePage = () => {
-  const { userInfo } = useContext(AuthContext);
+  const { userInfo } = useAuth();
   const [activePanel, setActivePanel] = useState('info');
 
   useEffect(() => {

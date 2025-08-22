@@ -5,11 +5,11 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Card, Button, Alert, Table, Spinner } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit, faTrash, faPlus } from '@fortawesome/free-solid-svg-icons';
-import { AuthContext } from '../../context/AuthContext'; // Ajustamos la ruta del import
+import { useAuth } from '../../context/AuthContext';
 import productService from '../../services/productService'; // Ajustamos la ruta del import
 
 const ProductPanel = () => {
-  const { userInfo } = useContext(AuthContext);
+  const { userInfo } = useAuth();
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);

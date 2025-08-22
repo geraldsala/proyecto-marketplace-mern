@@ -9,11 +9,11 @@ import {
   faLaptop, faHeadphones, faMobileAlt, faHome, faSignOutAlt, 
   faUserCog, faHistory, faHeart   // 👈 añadimos faHeart
 } from '@fortawesome/free-solid-svg-icons';
-import { AuthContext } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import './Header.css';
 
 const Header = () => {
-  const { userInfo, logout } = useContext(AuthContext);
+  const { userInfo, logout } = useAuth();
   const navigate = useNavigate();
 
   const [keyword, setKeyword] = useState('');

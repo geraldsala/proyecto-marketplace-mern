@@ -2,11 +2,11 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Container, Table, Button, Alert, Spinner, Modal, Form } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUsers, faEdit } from '@fortawesome/free-solid-svg-icons';
-import { AuthContext } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import userService from '../services/userService';
 
 const AdminPage = () => {
-  const { userInfo } = useContext(AuthContext);
+  const { userInfo } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

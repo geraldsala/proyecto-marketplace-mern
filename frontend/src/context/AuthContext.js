@@ -1,19 +1,16 @@
 // frontend/src/context/AuthContext.js
 
-// 1. AÑADIMOS 'useContext' a la línea de importación
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import axios from 'axios';
+// 1. Ya no se importa axios aquí. ¡El contexto no debe preocuparse por eso!
+import userService from '../services/userService'; // 2. Se importa el servicio centralizado.
 
 const AuthContext = createContext();
 
-// 2. AÑADIMOS Y EXPORTAMOS LA FUNCIÓN 'useAuth'
-//    Esto es lo que solucionará el error de compilación.
 export const useAuth = () => {
   return useContext(AuthContext);
 };
 
-// De aquí en adelante, su código original se mantiene intacto
-const AuthProvider = ({ children }) => {
+export const AuthProvider = ({ children }) => { // Exportamos AuthProvider aquí
   const [userInfo, setUserInfo] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -25,50 +22,42 @@ const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const login = async (email, password) => {
+  // 3. La función register es ahora mucho más simple y correcta
+  const register = async (userData) => {
     try {
-      const config = {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      };
-      const { data } = await axios.post(
-        '/api/auth/login',
-        { email, password },
-        config
-      );
+      // Delega el trabajo pesado al servicio, que ya tiene la URL correcta ('/api/users/register')
+      const data = await userService.register(userData);
       setUserInfo(data);
-      localStorage.setItem('userInfo', JSON.stringify(data));
+      localStorage.setItem('userInfo', JSON.stringify(data)); // El servicio ya hace esto, pero por si acaso.
     } catch (error) {
-      console.error('Error en el login:', error.response.data.message);
+      console.error('Error en el registro:', error);
+      // Re-lanzamos el error para que el componente del formulario pueda atraparlo y mostrarlo.
       throw error;
     }
   };
 
-  const register = async (userData) => {
+  const login = async (email, password) => {
     try {
-        const config = {
-            headers: { 'Content-Type': 'application/json' },
-        };
-        const { data } = await axios.post('/api/auth/register', userData, config);
-        setUserInfo(data);
-        localStorage.setItem('userInfo', JSON.stringify(data));
+      const data = await userService.login({ email, password });
+      setUserInfo(data);
+      // El servicio ya guarda en localStorage, pero lo dejamos por consistencia.
+      localStorage.setItem('userInfo', JSON.stringify(data));
     } catch (error) {
-        console.error('Error en el registro:', error.response.data.message);
-        throw error;
+      console.error('Error en el login:', error);
+      throw error;
     }
   };
 
   const logout = () => {
+    userService.logout(); // El servicio se encarga de limpiar localStorage
     setUserInfo(null);
-    localStorage.removeItem('userInfo');
   };
 
   return (
-    <AuthContext.Provider value={{ userInfo, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ userInfo, loading, login, register, logout, setUserInfo }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-export { AuthProvider, AuthContext };
+// Ya no es necesario exportar AuthContext por separado si usamos el hook 'useAuth'

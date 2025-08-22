@@ -1,7 +1,7 @@
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Form, Button, Row, Col, Alert, Container, Spinner } from 'react-bootstrap';
-import { AuthContext } from '../context/AuthContext'; // Importamos el contexto
+import { useAuth } from '../context/AuthContext';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -10,7 +10,7 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   
   const navigate = useNavigate();
-  const { login } = useContext(AuthContext); // Obtenemos la función login del contexto
+  const { login } = useAuth();
 
   const submitHandler = async (e) => {
     e.preventDefault();

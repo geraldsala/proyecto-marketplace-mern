@@ -31,7 +31,23 @@ const authUser = asyncHandler(async (req, res) => {
  * Registrar un nuevo usuario
  */
 const registerUser = asyncHandler(async (req, res) => {
-  const { nombre, email, password, tipoUsuario } = req.body;
+  // ANTES: solo recibíamos unos pocos campos.
+  // AHORA: destructuramos todos los campos nuevos del formulario.
+  const { 
+    nombre, 
+    email, 
+    password, 
+    tipoUsuario,
+    cedula,
+    nombreUsuario,
+    pais,
+    direccion,
+    telefono,
+    fotoLogo,
+    redesSociales,
+    nombreTienda // Este ya lo tenías, ¡genial!
+  } = req.body;
+
   const userExists = await User.findOne({ email });
 
   if (userExists) {
@@ -39,7 +55,21 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new Error('El usuario ya existe');
   }
 
-  const user = await User.create({ nombre, email, password, tipoUsuario });
+  // AÑADIMOS los nuevos campos al objeto que se guardará en la base de datos.
+  const user = await User.create({ 
+    nombre, 
+    email, 
+    password, 
+    tipoUsuario,
+    cedula,
+    nombreUsuario,
+    pais,
+    direccion,
+    telefono,
+    fotoLogo,
+    redesSociales,
+    nombreTienda: tipoUsuario === 'tienda' ? nombreTienda : undefined,
+  });
 
   if (user) {
     res.status(201).json({

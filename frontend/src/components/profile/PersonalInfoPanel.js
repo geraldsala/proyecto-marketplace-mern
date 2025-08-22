@@ -1,13 +1,13 @@
-// frontend/src/components/profile/PersonalInfoPanel.js
+// frontend/src/components/profile/PersonalInfoPanel.js (Versión Mejorada)
 
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Form, Button, Alert, Card } from 'react-bootstrap';
-import axios from 'axios';
-import { AuthContext } from '../../context/AuthContext'; // Ajustamos la ruta del import
+import { useAuth } from '../../context/AuthContext';
+import userService from '../../services/userService'; // Usamos el servicio
 
 const PersonalInfoPanel = () => {
-  const { userInfo, login } = useContext(AuthContext);
-  const [formData, setFormData] = useState({ nombreCompleto: '', email: '' });
+  const { userInfo, setUserInfo } = useAuth(); // Obtenemos la función para actualizar el estado
+  const [formData, setFormData] = useState({ nombre: '', email: '' });
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
@@ -15,7 +15,7 @@ const PersonalInfoPanel = () => {
 
   useEffect(() => {
     if (userInfo) {
-      setFormData({ nombreCompleto: userInfo.nombre, email: userInfo.email });
+      setFormData({ nombre: userInfo.nombre, email: userInfo.email });
     }
   }, [userInfo]);
 
@@ -28,14 +28,17 @@ const PersonalInfoPanel = () => {
     setError('');
     setSuccess('');
     try {
-      const config = {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${userInfo.token}`,
-        },
-      };
-      const { data } = await axios.put('/api/users/profile', { nombre: formData.nombreCompleto, email: formData.email, password }, config);
-      login(data);
+      // Usamos la función del servicio para actualizar el perfil
+      const updatedUser = await userService.updateProfile({ 
+          nombre: formData.nombre, 
+          email: formData.email, 
+          password 
+      });
+
+      // Actualizamos el estado global y el localStorage
+      setUserInfo(updatedUser); 
+      localStorage.setItem('userInfo', JSON.stringify(updatedUser));
+
       setSuccess('Perfil actualizado correctamente');
       setPassword('');
       setConfirmPassword('');
@@ -50,21 +53,21 @@ const PersonalInfoPanel = () => {
       {error && <Alert variant='danger'>{error}</Alert>}
       {success && <Alert variant='success'>{success}</Alert>}
       <Form onSubmit={submitHandler}>
-        <Form.Group controlId='nombreCompleto' className='mb-3'>
+        <Form.Group controlId='nombre' className='mb-3'>
           <Form.Label>Nombre</Form.Label>
-          <Form.Control type='text' placeholder='Ingresa tu nombre' value={formData.nombreCompleto} onChange={(e) => setFormData({...formData, nombreCompleto: e.target.value})} />
+          <Form.Control type='text' value={formData.nombre} onChange={(e) => setFormData({...formData, nombre: e.target.value})} />
         </Form.Group>
         <Form.Group controlId='email' className='mb-3'>
           <Form.Label>Email</Form.Label>
-          <Form.Control type='email' placeholder='Ingresa tu email' value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
+          <Form.Control type='email' value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
         </Form.Group>
         <Form.Group controlId='password' className='mb-3'>
           <Form.Label>Nueva Contraseña (opcional)</Form.Label>
-          <Form.Control type='password' placeholder='Ingresa tu nueva contraseña' value={password} onChange={(e) => setPassword(e.target.value)} />
+          <Form.Control type='password' value={password} onChange={(e) => setPassword(e.target.value)} />
         </Form.Group>
         <Form.Group controlId='confirmPassword' className='mb-3'>
           <Form.Label>Confirmar Nueva Contraseña</Form.Label>
-          <Form.Control type='password' placeholder='Confirma la nueva contraseña' value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+          <Form.Control type='password' value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
         </Form.Group>
         <Button type='submit' variant='primary' className='w-100'>Actualizar</Button>
       </Form>

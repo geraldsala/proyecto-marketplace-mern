@@ -27,6 +27,7 @@ const paymentMethodSchema = new mongoose.Schema(
     holderName: { type: String, required: true },
     expMonth: { type: Number, required: true },
     expYear: { type: Number, required: true },
+    saldo: { type: Number, default: 5000 },
     providerId: { type: String },
     isDefault: { type: Boolean, default: false }
   },
