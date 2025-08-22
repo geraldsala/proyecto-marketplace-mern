@@ -8,10 +8,7 @@ const {
 } = require('../controllers/categoryController.js');
 const { protect, authorize } = require('../middlewares/authMiddleware.js');
 
-// Ruta Pública para ver categorías
 router.route('/').get(getCategories);
-
-// Rutas de Admin/Tienda para gestionar categorías
 router.route('/').post(protect, authorize('admin', 'tienda'), createCategory);
 router
   .route('/:id')

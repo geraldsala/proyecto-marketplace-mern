@@ -11,14 +11,9 @@ const {
 } = require('../controllers/productController.js');
 const { protect, authorize } = require('../middlewares/authMiddleware.js');
 
-// --- Rutas Públicas ---
 router.route('/').get(getProducts);
 router.route('/:id').get(getProductById);
-
-// --- Ruta para Calificaciones (solo compradores) ---
 router.route('/:id/reviews').post(protect, authorize('comprador'), createProductReview);
-
-// --- Rutas Protegidas para Tiendas/Vendedores y Admins ---
 router.route('/myproducts').get(protect, authorize('tienda'), getMyProducts);
 router.route('/').post(protect, authorize('tienda', 'admin'), createProduct);
 router
