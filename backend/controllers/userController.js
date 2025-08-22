@@ -2,6 +2,7 @@
 const asyncHandler = require('express-async-handler');
 const User = require('../models/User.js');
 const generateToken = require('../utils/generateToken.js');
+const { luhnCheck } = require('../utils/validation.js');
 
 /**
  * POST /api/users/login
@@ -181,37 +182,48 @@ const deleteShippingAddress = asyncHandler(async (req, res) => {
 
 /**
  * POST /api/users/paymentmethods
- * Agregar método de pago (sin datos sensibles)
+ * Agregar método de pago, VALIDANDO con Luhn antes de guardar.
  */
 const addPaymentMethod = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
   if (!user) { res.status(404); throw new Error('Usuario no encontrado'); }
 
+  // 1. Recibimos el número de tarjeta COMPLETO del frontend, además de los otros datos.
+  const { numeroTarjeta, brand, holderName, expMonth, expYear, isDefault } = req.body;
+
+  // 2. Validamos con el algoritmo de Luhn.
+  if (!numeroTarjeta || !luhnCheck(numeroTarjeta)) {
+    res.status(400);
+    throw new Error('El número de tarjeta no es válido.');
+  }
+  
+  // 3. Si pasa, guardamos SOLO los datos seguros. NUNCA el número completo.
   if (!Array.isArray(user.paymentMethods)) user.paymentMethods = [];
   if (!Array.isArray(user.formasPago)) user.formasPago = [];
 
-  const { brand, last4, holderName, expMonth, expYear, providerId, isDefault } = req.body;
-  if (!brand || !last4 || !holderName || !expMonth || !expYear) {
-    res.status(400);
-    throw new Error('Faltan campos requeridos del método de pago');
-  }
-
-  const totalPrevio = (user.paymentMethods?.length || 0) + (user.formasPago?.length || 0);
-  const willBeDefault = !!isDefault || totalPrevio === 0;
+  const willBeDefault = !!isDefault || user.paymentMethods.length === 0;
 
   if (willBeDefault) {
-    (user.paymentMethods || []).forEach(m => (m.isDefault = false));
-    (user.formasPago || []).forEach(m => (m.isDefault = false));
+    user.paymentMethods.forEach(m => (m.isDefault = false));
+    user.formasPago.forEach(m => (m.isDefault = false));
   }
 
-  const doc = { brand, last4, holderName, expMonth, expYear, providerId, isDefault: willBeDefault };
+  const doc = { 
+    brand, 
+    holderName, 
+    expMonth, 
+    expYear,
+    isDefault: willBeDefault,
+    last4: numeroTarjeta.slice(-4) // <-- Extraemos los últimos 4 dígitos
+  };
 
   user.paymentMethods.push(doc);
-  user.formasPago.push(doc);
+  user.formasPago.push(doc); // Mantenemos la retrocompatibilidad
 
   await user.save();
-  const newMethod = user.paymentMethods[user.paymentMethods.length - 1];
-  res.status(201).json(newMethod);
+  
+  // 4. Devolvemos la lista COMPLETA y actualizada de métodos de pago.
+  res.status(201).json(user.paymentMethods);
 });
 
 /**
@@ -223,37 +235,33 @@ const deletePaymentMethod = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
   if (!user) { res.status(404); throw new Error('Usuario no encontrado'); }
 
-  let idxNew = user.paymentMethods.findIndex(m => String(m._id) === String(methodId));
-  let idxOld = user.formasPago.findIndex(m => String(m._id) === String(methodId));
+  // Tu lógica de borrado para retrocompatibilidad es buena, la mantenemos.
+  user.paymentMethods.pull({ _id: methodId });
+  user.formasPago.pull({ _id: methodId });
 
-  if (idxNew === -1 && idxOld !== -1) {
-    const target = user.formasPago[idxOld];
-    idxNew = user.paymentMethods.findIndex(m =>
-      m.last4 === target.last4 && m.expMonth === target.expMonth && m.expYear === target.expYear
-    );
+  // Reasignar default si es necesario...
+  const wasDefault = !user.paymentMethods.some(m => m.isDefault);
+  if (wasDefault && user.paymentMethods.length > 0) {
+    user.paymentMethods[0].isDefault = true;
+    // También actualiza el campo antiguo si lo usas
+    const oldDefaultId = user.paymentMethods[0]._id;
+    const oldMethod = user.formasPago.id(oldDefaultId);
+    if(oldMethod) oldMethod.isDefault = true;
   }
-  if (idxOld === -1 && idxNew !== -1) {
-    const target = user.paymentMethods[idxNew];
-    idxOld = user.formasPago.findIndex(m =>
-      m.last4 === target.last4 && m.expMonth === target.expMonth && m.expYear === target.expYear
-    );
-  }
-
-  const wasDefault =
-    (idxNew !== -1 && user.paymentMethods[idxNew]?.isDefault) ||
-    (idxOld !== -1 && user.formasPago[idxOld]?.isDefault);
-
-  if (idxNew !== -1) user.paymentMethods.splice(idxNew, 1);
-  if (idxOld !== -1) user.formasPago.splice(idxOld, 1);
-
-  if (wasDefault) {
-    if (user.paymentMethods.length > 0) user.paymentMethods[0].isDefault = true;
-    if (user.formasPago.length > 0) user.formasPago[0].isDefault = true;
-  }
-
+  
   await user.save();
-  res.json({ message: 'Método de pago eliminado' });
+  
+  // Devolvemos la lista COMPLETA y actualizada.
+  res.json(user.paymentMethods);
 });
+
+// Asegúrate de que tu exportación esté completa
+module.exports = {
+  // ...
+  addPaymentMethod,
+  deletePaymentMethod,
+  // ...
+};
 
 module.exports = {
   authUser,

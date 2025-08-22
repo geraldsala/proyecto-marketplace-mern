@@ -114,7 +114,7 @@ export default function ShippingAddressesPanel(props) {
   return () => {
       alive = false;
     };
-  }, []);
+  } []
 
   // Agregar dirección (POST)
   const onAdd = async (e) => {
