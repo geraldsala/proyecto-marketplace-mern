@@ -1,18 +1,15 @@
 // frontend/src/services/orderService.js
-
 import api from './api';
 
-const API_URL = '/api/orders';
-
-/**
- * Crea una nueva orden en el backend.
- * @param {object} orderData - Datos completos de la orden.
- */
-const createOrder = async (orderData) => {
-  const { data } = await api.post(API_URL, orderData);
+const createOrder = async (payload) => {
+  const { data } = await api.post('/api/orders', payload);
+  // data = { orderId, orderNumber }
   return data;
 };
 
-export default {
-  createOrder,
+const getOrderById = async (id) => {
+  const { data } = await api.get(`/api/orders/${id}`);
+  return data;
 };
+
+export default { createOrder, getOrderById };

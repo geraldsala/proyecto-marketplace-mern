@@ -102,9 +102,10 @@ const CheckoutPage = () => {
                     itemsPrice, taxPrice, shippingPrice, totalPrice,
                 };
 
-                const createdOrder = await orderService.createOrder(orderData);
-                if (clearCart) clearCart(); // Llama a clearCart si existe
-                navigate(`/order/${createdOrder._id}`);
+                const { orderId, orderNumber } = await orderService.createOrder(orderData);
+                if (!orderId) throw new Error('El backend no devolvió orderId');
+                if (clearCart) clearCart();
+                navigate(`/orden/${orderId}/exito`, { state: { orderNumber } });
             }
         } catch (err) {
             setError(err.response?.data?.message || 'Ocurrió un error inesperado.');

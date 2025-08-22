@@ -28,6 +28,7 @@ import NewsletterPopup from './components/NewsletterPopup';
 import CheckoutPage from './pages/CheckoutPage';
 import OrderPage from './pages/OrderPage';
 import StorePage from './pages/StorePage';
+import OrderSuccess from './pages/OrderSuccess';
 
 function App() {
   return (
@@ -58,6 +59,7 @@ function App() {
             <Route path='/checkout' element={<CheckoutPage />} />
             <Route path="/order/:id" element={<OrderPage />} />
             <Route path="/tienda/:slug" element={<StorePage />} />
+            <Route path="/orden/:id/exito" element={<OrderSuccess />} />
 
 
           </Routes>
